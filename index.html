@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BPCL EVCS Reimbursement Invoice Generator</title>
+
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Libraries: QRCode.js, jsPDF, html2canvas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+/* ═════════════════════════════════════════════════════════════════════
+   BPCL EVCS Reimbursement Invoice Generator
+   Based on WnM Invoice Generator UI System & Structure
+   ═════════════════════════════════════════════════════════════════════ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #F4F6F9;
+  color: #1C2B3A;
+  min-height: 100vh;
+  padding: 0 0 60px;
+  overflow-x: hidden;
+}
+
+/* Header Bar - Full Width BPCL Navy with Yellow Border */
+.app-header {
+  width: 100%;
+  background: #003399;
+  color: white;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(0, 51, 153, 0.25);
+  border-bottom: 3.5px solid #F5A623;
+  margin-bottom: 24px;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.site-header-logo {
+  height: 44px;
+  width: auto;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+  flex-shrink: 0;
+}
+
+.brand-divider {
+  width: 3px;
+  height: 36px;
+  background: #F5A623;
+  margin: 0 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.brand-text h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: 0.2px;
+  line-height: 1.25;
+}
+
+.brand-text p {
+  font-size: 11.5px;
+  color: #CBD5E1;
+  opacity: 0.95;
+  margin-top: 3px;
+}
+
+/* Main Cards Container */
+.form-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  max-width: 860px;
+  margin: 0 auto 20px;
+  overflow: hidden;
+  width: calc(100% - 32px);
+}
+.form-card-header {
+  background: #0A3161;
+  color: white;
+  padding: 14px 22px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.form-card-header-title {
+  display: flex; align-items: center; gap: 10px;
+  line-height: 1.3;
+}
+.form-card-header-title::before {
+  content: '';
+  width: 4px; height: 18px;
+  background: #F5A623;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.form-card-body { padding: 20px 24px; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px 20px; }
+.span-2 { grid-column: span 2; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; }
+.field label em { color: #E53935; font-style: normal; }
+.field input, .field select {
+  padding: 10px 13px;
+  border: 1.5px solid #DDE3ED;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #1C2B3A;
+  background: #FAFBFD;
+  outline: none;
+  width: 100%;
+  transition: border-color .18s, box-shadow .18s, background .18s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.field input:focus, .field select:focus {
+  border-color: #0A3161;
+  box-shadow: 0 0 0 3px rgba(10,49,97,.12);
+  background: #fff;
+}
+.field .hint { font-size: 11px; color: #94A3B8; line-height: 1.3; }
+.field.err input, .field.err select { border-color: #E53935; background: #FFF5F5; }
+.field .errmsg { font-size: 11px; color: #E53935; display: none; }
+.field.err .errmsg { display: block; }
+
+/* Quick SAP Selector Badge */
+.sap-badge-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.sap-chip {
+  background: #EBF2FB;
+  color: #0A3161;
+  border: 1px solid #C5D8EF;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.sap-chip:active, .sap-chip:hover {
+  background: #0A3161;
+  color: white;
+}
+
+/* Attachment Cards */
+.dropzone-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.dropzone-card {
+  border: 2px dashed #C5D8EF;
+  border-radius: 12px;
+  background: #FAFBFD;
+  padding: 20px 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  user-select: none;
+}
+
+.dropzone-card:active, .dropzone-card:hover {
+  border-color: #0A3161;
+  background: #F0F4FA;
+}
+
+.dropzone-card.has-file {
+  border-style: solid;
+  border-color: #2E7D32;
+  background: #F1F8E9;
+}
+
+.dropzone-icon {
+  font-size: 28px;
+  color: #94A3B8;
+  margin-bottom: 8px;
+}
+
+.dropzone-card.has-file .dropzone-icon {
+  color: #2E7D32;
+}
+
+.dropzone-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0A3161;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.dropzone-sub {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1C2B3A;
+}
+
+.dropzone-hint {
+  font-size: 10.5px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.dropzone-preview-img {
+  max-width: 100%;
+  max-height: 130px;
+  border-radius: 6px;
+  margin-top: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  object-fit: contain;
+}
+
+.dropzone-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #C8102E;
+  color: white;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.total-bar {
+  background: linear-gradient(90deg,#EBF2FB,#F0F7FF);
+  border: 1.5px solid #C5D8EF;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  gap: 8px;
+}
+.tbar-item { text-align: center; flex: 1; min-width: 0; }
+.tbar-v { font-size: 18px; font-weight: 700; color: #0A3161; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tbar-v.red { color: #C8102E; font-size: 21px; }
+.tbar-l { font-size: 10px; color: #64748B; text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+.tbar-sep { width: 1px; height: 36px; background: #C5D8EF; flex-shrink: 0; }
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  max-width: 860px;
+  margin: 24px auto 0;
+  width: calc(100% - 32px);
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 12px 24px;
+  border-radius: 9px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all .18s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  touch-action: manipulation;
+}
+.btn:active { transform: scale(0.98); }
+.btn-ghost { background: white; color: #475569; border: 1.5px solid #DDE3ED; }
+.btn-ghost:hover { background: #F4F6F9; }
+.btn-blue { background: #0A3161; color: white; box-shadow: 0 3px 10px rgba(10,49,97,.22); }
+.btn-blue:hover { background: #0c3d7a; }
+.btn-red { background: #C8102E; color: white; box-shadow: 0 3px 10px rgba(200,16,46,.25); }
+.btn-red:hover { background: #a80d26; }
+.btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 6px; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(14px);
+  background: #1C2B3A;
+  color: white;
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: all .25s ease;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  max-width: 90vw;
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.bad { background: #C8102E; }
+
+/* Overlay Modal */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.68);
+  z-index: 1000;
+  padding: 16px 10px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.overlay.on { display: flex; align-items: flex-start; justify-content: center; }
+.ov-inner {
+  background: white;
+  border-radius: 14px;
+  overflow: hidden;
+  max-width: 860px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  margin: auto;
+}
+.ov-bar {
+  background: #0A3161;
+  color: white;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ov-bar-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ov-bar h3 { font-size: 14.5px; font-weight: 600; white-space: nowrap; }
+.doc-type-toggle {
+  display: flex;
+  background: rgba(255,255,255,0.18);
+  border-radius: 7px;
+  padding: 3px;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.doc-type-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 5px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.doc-type-btn.active { background: #F5A623; color: #0A3161; }
+.xbtn {
+  background: rgba(255,255,255,.18);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.xbtn:hover, .xbtn:active { background: rgba(255,255,255,.32); }
+
+#previewHost {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #E2E8F0;
+  padding: 14px 10px;
+  display: flex;
+  justify-content: center;
+}
+#previewHost > div {
+  margin: 0 auto;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+  max-width: 100%;
+}
+
+.ov-foot {
+  background: #F4F6F9;
+  padding: 12px 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Hidden render target - always kept at full print width 794px for html2canvas */
+#inv-render {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  display: none;
+  width: 794px;
+  background: white;
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   MOBILE & TABLET RESPONSIVE RULES (FITS ANY SCREEN RESOLUTION)
+   ═════════════════════════════════════════════ */
+
+/* Tablets & Small Desktops (<= 768px) */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 12px 16px;
+    margin-bottom: 18px;
+  }
+  .site-header-logo {
+    height: 38px;
+  }
+  .brand-divider {
+    height: 30px;
+    margin: 0 12px;
+  }
+  .brand-text h1 {
+    font-size: 15.5px;
+  }
+  .brand-text p {
+    font-size: 10.5px;
+  }
+  .form-card {
+    width: calc(100% - 20px);
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .form-card-header {
+    padding: 12px 18px;
+    font-size: 11.5px;
+  }
+  .form-card-body {
+    padding: 16px 18px;
+  }
+  .grid2 {
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+  .grid3 {
+    grid-template-columns: 1fr 1fr;
+    gap: 13px;
+  }
+  .grid3 .span-2 {
+    grid-column: span 2;
+  }
+  .total-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+  .tbar-sep {
+    display: none;
+  }
+  .tbar-item {
+    text-align: left;
+    background: rgba(255,255,255,0.7);
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+  .tbar-v {
+    font-size: 16px;
+  }
+  .tbar-v.red {
+    font-size: 18px;
+  }
+  .actions {
+    width: calc(100% - 20px);
+    flex-direction: column;
+    gap: 10px;
+  }
+  .actions .btn {
+    width: 100%;
+    padding: 13px 18px;
+    font-size: 14px;
+  }
+  .ov-foot {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ov-foot .btn {
+    width: 100%;
+  }
+}
+
+/* Mobile Phones (<= 520px) */
+@media (max-width: 520px) {
+  body {
+    padding: 0 0 40px;
+  }
+  .app-header {
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
+  .site-header-logo {
+    height: 34px;
+  }
+  .brand-divider {
+    height: 26px;
+    margin: 0 10px;
+    width: 2.5px;
+  }
+  .brand-text h1 {
+    font-size: 13.5px;
+    line-height: 1.25;
+  }
+  .brand-text p {
+    font-size: 9.5px;
+  }
+  .form-card {
+    width: calc(100% - 14px);
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  .form-card-header {
+    padding: 10px 14px;
+    font-size: 11px;
+  }
+  .form-card-body {
+    padding: 14px 12px;
+  }
+  .grid3 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .grid3 .span-2 {
+    grid-column: span 1;
+  }
+  .dropzone-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .dropzone-card {
+    padding: 16px 12px;
+  }
+  .total-bar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+  .tbar-item {
+    text-align: center;
+  }
+  .field input, .field select {
+    font-size: 14px;
+    padding: 10px 11px;
+  }
+  .actions {
+    width: calc(100% - 14px);
+    margin-top: 18px;
+  }
+  .ov-inner {
+    border-radius: 10px;
+  }
+  .ov-bar {
+    padding: 10px 12px;
+  }
+  .ov-bar-title {
+    width: 100%;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .doc-type-toggle {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .doc-type-btn {
+    font-size: 11px;
+    padding: 5px 9px;
+  }
+  #previewHost {
+    padding: 8px 4px;
+  }
+}
+</style>
+</head>
+<body>
+
+  <!-- App Header Bar -->
+  <header class="app-header">
+    <div class="app-brand">
+      <img src="data:image/webp;base64,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" class="site-header-logo" alt="BPCL Logo">
+      <div class="brand-divider"></div>
+      <div class="brand-text">
+        <h1>EVCS Electricity Charges Reimbursement Generator</h1>
+        <p>EVCS Electricity Charges Reimbursement &middot; BPCL Retail</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- SECTION 1: OUTLET & INVOICE DETAILS -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <div class="form-card-header-title">Outlet &amp; Dealer Invoice Details</div>
+    </div>
+    <div class="form-card-body">
+      <div class="grid2">
+        <div class="field" id="fc-cc">
+          <label>Customer Code (SAP Code) <em>*</em></label>
+          <input type="text" id="custCode" placeholder="Type or select Customer Code (e.g. 156576)" list="sap-list" oninput="autoLookupSAP()" onchange="autoLookupSAP()">
+          <div id="cc-badge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;display:inline-block;margin-top:2px;"></div>
+          <datalist id="sap-list"></datalist>
+          
+          <span class="errmsg">Required</span>
+        </div>
+        <div class="field" id="fc-cn">
+          <label>Customer / Outlet Name <em>*</em></label>
+          <input type="text" id="custName" placeholder="Type or select Outlet Name (e.g. SHIVAM PETROLEUM)" list="outlet-list" oninput="autoLookupOutletName()" onchange="autoLookupOutletName()">
+          <datalist id="outlet-list"></datalist>
+          <span class="errmsg">Required</span>
+        </div>
+        <div class="field">
+          <label>Dealer Invoice Number</label>
+          <input type="text" id="invNo" placeholder="e.g. 156576/EV0001">
+          <span class="hint">Auto-generated from SAP Code — edit freely</span>
+        </div>
+        <div class="field" id="fc-id">
+          <label>Dealer Invoice Date <em>*</em></label>
+          <input type="date" id="invDate">
+          <span class="errmsg">Required</span>
+        </div>
+        <div class="field" id="fc-vc">
+          <label>Vendor Code <em>*</em></label>
+          <input type="text" id="vendorCode" placeholder="e.g. 333810">
+          <span class="errmsg">Required</span>
+        </div>
+        <div class="field" id="fc-gstin">
+          <label>Outlet / Supplier GSTIN <em>*</em></label>
+          <input type="text" id="gstin" placeholder="e.g. 29AAHFB1380P1Z0" maxlength="15" style="text-transform:uppercase;">
+          <span class="errmsg">Required</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: EVCS & ELECTRICITY BILL DETAILS -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <div class="form-card-header-title">EVCS &amp; DISCOM Electricity Bill Details</div>
+    </div>
+    <div class="form-card-body">
+      <div class="grid3">
+        <div class="field" id="fc-discom">
+          <label>DISCOM / Power Utility <em>*</em></label>
+          <input type="text" id="discomName" placeholder="e.g. HESCOM / BESCOM / MSEDCL">
+          <span class="errmsg">Required</span>
+        </div>
+        <div class="field" id="fc-rr">
+          <label>Consumer Account / RR No. <em>*</em></label>
+          <input type="text" id="rrNo" placeholder="e.g. HES-981242">
+          <span class="errmsg">Required</span>
+        </div>
+        <div class="field" id="fc-bd">
+          <label>Electricity Bill Date <em>*</em></label>
+          <input type="date" id="billDate">
+          <span class="errmsg">Required</span>
+        </div>
+        <div class="field span-2" id="fc-bp">
+          <label>Billing Period / Month <em>*</em></label>
+          <input type="text" id="billPeriod" placeholder="e.g. April 2026">
+          <span class="errmsg">Required</span>
+        </div>
+        <div class="field">
+          <label>Contracted Rate (₹ / kWh)</label>
+          <input type="number" step="0.01" id="ratePerUnit" placeholder="4.50" oninput="recalc()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: EV POWER CONSUMPTION DETAILS -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <div class="form-card-header-title">EV Power Consumption Details</div>
+    </div>
+    <div class="form-card-body">
+      <div class="grid3">
+        <div class="field" id="fc-units">
+          <label>Units Consumed (kWh) <em>*</em></label>
+          <input type="number" step="0.01" min="0" id="consumedUnits" placeholder="e.g. 3868.30" oninput="recalc()">
+          <span class="errmsg">Required</span>
+        </div>
+        <div class="field">
+          <label>EV Charger Make / Gun Type</label>
+          <input type="text" id="chargerDesc" placeholder="e.g. Delta 60kW Dual Gun CCS2">
+        </div>
+        <div class="field">
+          <label>Meter Reading / RR Ref</label>
+          <input type="text" id="meterRR" placeholder="e.g. MTR-10294 / HESCOM">
+        </div>
+        <div class="field span-2">
+          <label>Additional Fixed / Demand Charges (₹)</label>
+          <input type="number" step="0.01" min="0" id="addlAmt" placeholder="0.00" oninput="recalc()">
+        </div>
+      </div>
+
+      <div class="total-bar">
+        <div class="tbar-item">
+          <div class="tbar-v" id="sb-units">0.00 kWh</div>
+          <div class="tbar-l">Consumed Units</div>
+        </div>
+        <div class="tbar-sep"></div>
+        <div class="tbar-item">
+          <div class="tbar-v" id="sb-rate">₹4.50</div>
+          <div class="tbar-l">Rate / kWh</div>
+        </div>
+        <div class="tbar-sep"></div>
+        <div class="tbar-item">
+          <div class="tbar-v" id="sb-base">₹0</div>
+          <div class="tbar-l">Base Amount</div>
+        </div>
+        <div class="tbar-sep"></div>
+        <div class="tbar-item">
+          <div class="tbar-v red" id="sb-tot">₹0</div>
+          <div class="tbar-l">Grand Total</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: ATTACH DOCUMENTS (OPTIONAL) -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <div class="form-card-header-title">Attach Documents (Optional)</div>
+    </div>
+    <div class="form-card-body">
+      <p style="font-size:12px;color:#64748B;margin-bottom:12px;">
+        Upload images of the Electricity Bill / Supporting Bill and Payment Receipt to include them as additional pages in the merged PDF.
+      </p>
+
+      <div class="dropzone-grid">
+        <!-- Bill Image Dropzone -->
+        <div class="dropzone-card" id="dz-bill" onclick="$('file-bill').click()">
+          <input type="file" id="file-bill" accept="image/*" style="display:none" onchange="handleFileUpload(event, 'bill')">
+          <div id="dz-bill-content">
+            <div class="dropzone-icon"><i class="fa-solid fa-file-invoice"></i></div>
+            <div class="dropzone-title">Electricity Bill / Supporting Bill Image</div>
+            <div class="dropzone-sub">Tap to capture or upload</div>
+            <div class="dropzone-hint">Camera · JPG, PNG — Bill page</div>
+          </div>
+        </div>
+
+        <!-- Receipt Image Dropzone -->
+        <div class="dropzone-card" id="dz-receipt" onclick="$('file-receipt').click()">
+          <input type="file" id="file-receipt" accept="image/*" style="display:none" onchange="handleFileUpload(event, 'receipt')">
+          <div id="dz-receipt-content">
+            <div class="dropzone-icon"><i class="fa-solid fa-receipt"></i></div>
+            <div class="dropzone-title">Payment Receipt Image</div>
+            <div class="dropzone-sub">Tap to capture or upload</div>
+            <div class="dropzone-hint">Camera · JPG, PNG — Payment receipt</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+    <button class="btn btn-ghost" onclick="resetAll()">↺ Reset</button>
+    <button class="btn btn-blue" onclick="doPreview()">👁 Preview Invoice</button>
+    <button class="btn btn-red" onclick="doGeneratePDF()">⬇ Download PDF</button>
+  </div>
+
+  <!-- FOOTER -->
+  <footer style="display: flex; justify-content: center; margin-top: 45px; margin-bottom: 30px;">
+    <div style="display: flex; align-items: center; background: #ffffff; padding: 6px 20px 6px 6px; border-radius: 50px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); border: 1px solid #E2E8F0; gap: 12px; cursor: default; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 24px rgba(0, 0, 0, 0.08)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(0, 0, 0, 0.05)';" >
+      <div style="width: 38px; height: 38px; background: #003399; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #F5A623; font-weight: 800; font-size: 19px; filter: drop-shadow(0 2px 4px rgba(0, 51, 153, 0.25)); font-family: 'Inter', sans-serif;">P</div>
+      <div style="display: flex; flex-direction: column; text-align: left; font-family: 'Inter', sans-serif; line-height: 1.2;">
+        <span style="font-size: 8.5px; font-weight: 700; color: #94A3B8; letter-spacing: 1px; text-transform: uppercase;">Made By</span>
+        <span style="font-size: 14.5px; font-weight: 700; color: #0A3161; margin-top: 1px;">Patil</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- PREVIEW OVERLAY -->
+  <div class="overlay" id="overlay">
+    <div class="ov-inner">
+      <div class="ov-bar">
+        <div class="ov-bar-title">
+          <h3>Invoice Preview</h3>
+          <div class="doc-type-toggle" id="docTypeToggleGroup">
+            <button class="doc-type-btn" id="btn-doc-letter" onclick="switchDocType('letter')">Reimbursement Letter</button>
+            <button class="doc-type-btn active" id="btn-doc-tax" onclick="switchDocType('tax')">GST e-Invoice</button>
+          </div>
+        </div>
+        <button class="xbtn" onclick="closeOv()">×</button>
+      </div>
+      <div id="previewHost" style="overflow-x:auto;padding:0;"></div>
+      <div class="ov-foot">
+        <button class="btn btn-ghost" onclick="closeOv()">Close</button>
+        <button class="btn btn-red" onclick="doGeneratePDF()">⬇ Download PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden render target for html2canvas -->
+  <div id="inv-render"></div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    let currentDocType = 'tax'; // 'tax', 'letter', 'bill', 'receipt'
+    let billImageBase64 = null;
+    let receiptImageBase64 = null;
+
+    // ── VC Mapping Data (353 records from VC_Mapping.xlsx) ───────
+    const VC_DATA = [{"cc": "116218", "cn": "ALTRADE AGENCIES", "vc": "125565", "gstin": "29AACFA2670E1ZQ"}, {"cc": "116221", "cn": "AZAD PETROL & DIESEL OIL DEALERS", "vc": "333816", "gstin": "29AADFA1202D1Z9"}, {"cc": "116223", "cn": "B.L.PATIL & SONS", "vc": "337927", "gstin": "29AAEFB1233G1ZU"}, {"cc": "116225", "cn": "GAJANAN PETROL PUMP", "vc": "178592", "gstin": "29AAQFG9000N1ZT"}, {"cc": "116228", "cn": "K.A.MAHAJAN", "vc": "338469", "gstin": "29AAVFK2567K1ZG"}, {"cc": "116229", "cn": "P.M.KARIKAZI", "vc": "323425", "gstin": "29AADFP1833B1ZL"}, {"cc": "116230", "cn": "R.B.KITTURKAR", "vc": "336280", "gstin": "29AABFR8652A1Z8"}, {"cc": "116231", "cn": "S.V. KOUJALGI & SONS", "vc": "336046", "gstin": "29APEPK2186E1ZV"}, {"cc": "116232", "cn": "SHREE LAXMI PETROL STORES", "vc": "156003", "gstin": "29AADFS8956J1ZF"}, {"cc": "116233", "cn": "SHRI MANGESH PETROL STORES", "vc": "333811", "gstin": "29AACFS7084C1Z2"}, {"cc": "116238", "cn": "NARAYAN DAS SHAMJI", "vc": "184469", "gstin": "29AAEFN5067C1ZA"}, {"cc": "116242", "cn": "RAMDURGA AUTO STORES", "vc": "334126", "gstin": "29AACFR2302L1Z9"}, {"cc": "116235", "cn": "S.S.MELLIGERI", "vc": "333815", "gstin": "29AACFM7852N1ZL"}, {"cc": "116248", "cn": "THE UGAR SUGAR WORKS LTD.", "vc": "121346", "gstin": "29AAACT7580R1ZD"}, {"cc": "116249", "cn": "V.V.VARDE", "vc": "336047", "gstin": "29AAEFV2853Q1ZD"}, {"cc": "116250", "cn": "V.B.SASNOOR", "vc": "335603", "gstin": "29AABFV2932K1ZW"}, {"cc": "116236", "cn": "S.S.MELLIGERI", "vc": "333815", "gstin": "29AACFM7852N1ZL"}, {"cc": "116240", "cn": "K.M.PATTANSHETTI & CO.", "vc": "335172", "gstin": "29AAIFK6670N1ZJ"}, {"cc": "116241", "cn": "A.G.PATWARDHAN & SONS", "vc": "337835", "gstin": "29AAJFA2262K1ZA"}, {"cc": "116247", "cn": "B.V.TALATHI & BROTHERS", "vc": "333792", "gstin": "29AABFB4010G1Z0"}, {"cc": "116251", "cn": "V.J.MANJREKAR & SON", "vc": "336868", "gstin": "29AABFV0998F1ZT"}, {"cc": "116252", "cn": "T.M.YERUDKAR", "vc": "150974", "gstin": "29AABFT5005F1ZF"}, {"cc": "116253", "cn": "SHRI GURUPRASAD FILLING STATION", "vc": "336018", "gstin": "29ACCPN4435A1ZX"}, {"cc": "116254", "cn": "C.V.BAGALKOTI & SONS", "vc": "164549", "gstin": "29AABFC2109B1Z5"}, {"cc": "116256", "cn": "C.M. BENNI", "vc": "335606", "gstin": "29AAEFC3378H1Z9"}, {"cc": "116257", "cn": "I.D.BANGARSHETRA & SONS", "vc": "333797", "gstin": "29AAAFI5040G1ZM"}, {"cc": "116259", "cn": "B.G.DODDAMANI & BROTHERS", "vc": "106929", "gstin": "29ABOPD7146D1ZL"}, {"cc": "116261", "cn": "H.OBHAN AUTOMOBILES", "vc": "156013", "gstin": "29AAGPO2964B1ZO"}, {"cc": "116262", "cn": "F.M.HASBI", "vc": "335475", "gstin": "29AABFF8021B1ZV"}, {"cc": "116264", "cn": "JYOTHI SERVICE STATION", "vc": "174518", "gstin": "29ABOPA2353B1Z1"}, {"cc": "116266", "cn": "KUNDGOL T.A.P.C.M SOCIETY", "vc": "163045", "gstin": "29AAAAT1214G1ZT"}, {"cc": "116269", "cn": "MAGAVI CITY FUELS", "vc": "189382", "gstin": "29ABYFM8401G1ZP"}, {"cc": "116270", "cn": "SHREE BASAWESHWER AUTO SERVICES", "vc": "183612", "gstin": "29AARPH9365E1Z5"}, {"cc": "116271", "cn": "T.B.MANVI & SONS", "vc": "338467", "gstin": "29AAGFT1552Q1ZJ"}, {"cc": "116272", "cn": "S.M. MIRJANKAR & CO.", "vc": "334106", "gstin": "29AAKFS2396B1ZZ"}, {"cc": "116275", "cn": "S.C. NAREGAL", "vc": "334075", "gstin": "29AAFFS2629J1ZV"}, {"cc": "116276", "cn": "PARIMALA ENTERPRISES", "vc": "336846", "gstin": "29AABFP6732H1Z3"}, {"cc": "116278", "cn": "S.G.PATIL & CO", "vc": "337487", "gstin": "29AAIFS5202J1Z1"}, {"cc": "116279", "cn": "G.L.SHETRA", "vc": "336121", "gstin": "29AABFG0686R1ZQ"}, {"cc": "116282", "cn": "WESTERN GARAGE", "vc": "336017", "gstin": "29AAAFW1726D1ZD"}, {"cc": "128824", "cn": "RENUKA PETROLEUM", "vc": "331745", "gstin": "29AAHFR6431P1ZI"}, {"cc": "138386", "cn": "MUJAWAR ROADWAYS", "vc": "334113", "gstin": "29ACVPM1448H3Z0"}, {"cc": "138899", "cn": "BARDE ROADLINES", "vc": "156983", "gstin": "29AAHFB1380P1Z0"}, {"cc": "140644", "cn": "ISHWAR PETROLEUM", "vc": "335043", "gstin": "29AFNPB6795F1ZZ"}, {"cc": "140923", "cn": "SHREYA AGENCY", "vc": "336776", "gstin": "29ABJPH9259G1Z6"}, {"cc": "141883", "cn": "ARAWIND PETROLEUM", "vc": "335595", "gstin": "29AAMFA0379E1ZE"}, {"cc": "143608", "cn": "PUJAR PETROLEUMS", "vc": "337780", "gstin": ""}, {"cc": "143741", "cn": "SHREE JAGADGURU TONTADARYA PRASAD N", "vc": "335462", "gstin": "29AAHTS4055J1Z0"}, {"cc": "146845", "cn": "NETRAVATHI SERVICE STATION", "vc": "341244", "gstin": "29AESPN6581M1ZD"}, {"cc": "147239", "cn": "P.C.KUBIHAL & BROS.FUELLING STATION", "vc": "333824", "gstin": "29APVPK6648A1ZF"}, {"cc": "147485", "cn": "SHRI PARISHWANATH PETROLEUMS", "vc": "334135", "gstin": "29ABHFS1728F1Z2"}, {"cc": "147487", "cn": "SUNIL PETROLEUM", "vc": "335464", "gstin": "29BGLPS8137C1ZZ"}, {"cc": "147536", "cn": "SRI BASAVESHWAR PETROLEUMS", "vc": "337489", "gstin": "29AAIFB2742E1ZM"}, {"cc": "147677", "cn": "DEVENDRA FILLING STATION", "vc": "335476", "gstin": "29AJBPA7814N1Z0"}, {"cc": "148767", "cn": "RAMESHWAR PETROLEUM", "vc": "180500", "gstin": "29AAWFR1390N1Z7"}, {"cc": "148968", "cn": "SHRI LAKSHMI PETROLEUM", "vc": "338430", "gstin": "29ACKFS0176P1ZC"}, {"cc": "149690", "cn": "R.B.KITTURKAR PETROLEUM", "vc": "336278", "gstin": "29AEHPK9924J1ZW"}, {"cc": "149793", "cn": "M.P.KARIKAZI", "vc": "333790", "gstin": "29ADVPK5515A1ZG"}, {"cc": "149794", "cn": "GOGTE PETROLEUM", "vc": "184468", "gstin": "29AANFG4156G1Z4"}, {"cc": "149816", "cn": "RANI CHANNAMMA PETROLEUM", "vc": "334127", "gstin": "29AHNPP9844R1ZW"}, {"cc": "150282", "cn": "LAXMI NARASINHA AGENCIES", "vc": "335036", "gstin": "29ALLPR9928E1ZD"}, {"cc": "154864", "cn": "JAI HANUMAN PETROLEUM", "vc": "337495", "gstin": "29ACEPH9466K1ZZ"}, {"cc": "156576", "cn": "SHIVAM PETROLEUM", "vc": "333810", "gstin": "29AFNPB9532L1ZX"}, {"cc": "157618", "cn": "KAMADHENU PETROLEUM", "vc": "337750", "gstin": ""}, {"cc": "159845", "cn": "NATIONAL PETROLEUM", "vc": "335590", "gstin": "29ALEPS5116N1ZK"}, {"cc": "159846", "cn": "S.B.KARADI PETROLEUM", "vc": "340529", "gstin": "29AYMPK0637R1ZM"}, {"cc": "159898", "cn": "KIWAD PETROLEUM", "vc": "338666", "gstin": "29AZOPK4489Q1Z2"}, {"cc": "160030", "cn": "RITESH PETROLEUM", "vc": "337817", "gstin": "29ASTPP2094C1ZA"}, {"cc": "160151", "cn": "SHRI GURUKARIBASAVESHWARA F S", "vc": "336833", "gstin": ""}, {"cc": "160518", "cn": "A.B. PARVATRAO PETROLEUM", "vc": "190853", "gstin": "29GHSPP0528M1ZG"}, {"cc": "162012", "cn": "OM SAIKRISHNA PETROLEUM", "vc": "337819", "gstin": "29ABIPB8455D1ZN"}, {"cc": "163252", "cn": "THE GSE&SS CO-OP SOCIETY LTD.", "vc": "334108", "gstin": "29AAAAG6216D1Z0"}, {"cc": "116267", "cn": "T.A.KURATTI", "vc": "185676", "gstin": "29AMKPK3149E1ZY"}, {"cc": "141349", "cn": "DEVEN AGENCIES", "vc": "180302", "gstin": "29ACHPB4298E1ZJ"}, {"cc": "143280", "cn": "DESHPANDE PETROLEUM", "vc": "188114", "gstin": "29ACMPJ3570A1ZP"}, {"cc": "147490", "cn": "SHRI VIGNESHWAR TRADERS", "vc": "337488", "gstin": "29ACIFS8814Q1Z3"}, {"cc": "155543", "cn": "V. T. FUEL STATION", "vc": "184303", "gstin": "29AAUFV2638M1Z6"}, {"cc": "146461", "cn": "SRI. VEERABHADRESHWAR PETROLEUMS", "vc": "180676", "gstin": "29AHRPJ2810R1ZM"}, {"cc": "150741", "cn": "ITNAL PETROLEUM", "vc": "338431", "gstin": "29AAQPI2292A1ZP"}, {"cc": "157520", "cn": "SRI SAI PETROLEUM", "vc": "184502", "gstin": "29ANYPP5234E1ZF"}, {"cc": "159799", "cn": "SRI SIDDHA RUDHA PETROLEUM", "vc": "336277", "gstin": "29ABLFS1553L1ZM"}, {"cc": "163073", "cn": "OM SAI RAM PETROLEUM", "vc": "337322", "gstin": "29AABPI2205C1ZF"}, {"cc": "163404", "cn": "KALLUR PETROLEUM", "vc": "337820", "gstin": "29BALPK5467K1ZZ"}, {"cc": "166290", "cn": "SHRI DESHPANDE PETROLEUM", "vc": "180728", "gstin": "29AEVPD0170R1ZT"}, {"cc": "167982", "cn": "S.C.PANCHAKATTIMATH PETROLEUM", "vc": "156984", "gstin": "29AFTPP0829E2Z1"}, {"cc": "167890", "cn": "GORAL PETROLEUM", "vc": "340379", "gstin": "29AEWPN0908G1Z3"}, {"cc": "167902", "cn": "KIRAN AUTO", "vc": "340122", "gstin": "29AABPZ4879K1ZP"}, {"cc": "168550", "cn": "VANASHREE PETROLEUM", "vc": "159814", "gstin": "29AFAPH3968P1ZS"}, {"cc": "169328", "cn": "SHRI LAXMI PETROLEUM", "vc": "157303", "gstin": ""}, {"cc": "170051", "cn": "ALIYA PETROLEUMS", "vc": "160711", "gstin": "29ABKPD4526D1ZV"}, {"cc": "170107", "cn": "KARTRU FAKEERESHWAR SERVICE CENTRE", "vc": "163130", "gstin": ""}, {"cc": "172069", "cn": "JAYALAXMI PETROLEUMS", "vc": "183464", "gstin": "29ARQPK7012B1ZU"}, {"cc": "173942", "cn": "SHREE DEVI PETROLEUM", "vc": "164857", "gstin": "29AFCPL2148F1ZL"}, {"cc": "173943", "cn": "SHREE REVANSHIDDESHWAR PETROLEUMS", "vc": "161902", "gstin": "29AWJPG3649J1Z3"}, {"cc": "173944", "cn": "HALADOTAR PETROLEUM", "vc": "167974", "gstin": "29ACWPH7917B1Z8"}, {"cc": "173945", "cn": "SHASHANK PETROLEUMS", "vc": "161821", "gstin": "29BSEPP6425M1Z4"}, {"cc": "173968", "cn": "PALLAVI PETROLEUM", "vc": "162585", "gstin": "29BKPPP4818P1Z2"}, {"cc": "173999", "cn": "SHREE RENUKA DEVI PETROLEUM", "vc": "161661", "gstin": "29BYYPK5759F1ZH"}, {"cc": "174322", "cn": "VENKATESH PETROLEUM", "vc": "162326", "gstin": "29AQDPJ1491K1ZK"}, {"cc": "174324", "cn": "MURAGESH PETROLEUM", "vc": "190185", "gstin": "29BLHPP3125N2ZL"}, {"cc": "174577", "cn": "SHREE TULAJABHAVANI PETROLEUM", "vc": "162066", "gstin": "29BEXPB9119P1ZH"}, {"cc": "174617", "cn": "RAVGANGA PETROLEUM", "vc": "168788", "gstin": ""}, {"cc": "174618", "cn": "MUJAWAR PETROLEUM", "vc": "163171", "gstin": "29ACVPM1449G1Z3"}, {"cc": "174688", "cn": "ILAGER FUEL CENTER", "vc": "185270", "gstin": "29AALPI5164N1Z2"}, {"cc": "174689", "cn": "SRI VEERABHADRESHWAR PETROLEUMS", "vc": "163190", "gstin": "29BHJPB1270J1ZD"}, {"cc": "170368", "cn": "SHAHAPUR PETROLEUM", "vc": "159800", "gstin": "29AIVPB8792P1ZY"}, {"cc": "171700", "cn": "VEERABHADRESWAR PETROLEUM SERVICES", "vc": "159922", "gstin": "29AAQPT8633C3Z3"}, {"cc": "173201", "cn": "SHIVGEET PETROLEUM", "vc": "160695", "gstin": "29AAFPN9481M1ZT"}, {"cc": "174691", "cn": "JABBAR PETROLEUM", "vc": "182759", "gstin": "29ALUPD2624C1Z7"}, {"cc": "174734", "cn": "SHRI SAI RAM PETROLEUM", "vc": "164070", "gstin": "29AELPK8515P1ZN"}, {"cc": "173202", "cn": "ANNAPURNESHWARI PETROLEUM", "vc": "167738", "gstin": "29AAMPP1779R1ZH"}, {"cc": "174810", "cn": "B S KALLUR PETROLEUM", "vc": "162689", "gstin": "29BLSPK4483M1Z3"}, {"cc": "174819", "cn": "SRI GURUSIDDAPRABHUDEVARU PETROLEUM", "vc": "162274", "gstin": "29ACAFS7193N1ZB"}, {"cc": "175102", "cn": "SHRINIVAS PETROLEUM", "vc": "164097", "gstin": "29DVOPS3985L1ZA"}, {"cc": "175244", "cn": "HUNASHIKATTI PETROLEUM", "vc": "164814", "gstin": "29AGXPH6870L1ZC"}, {"cc": "175245", "cn": "SHRI LAXMI VENKATESHWAR PETROLEUM", "vc": "162876", "gstin": "29BKQPP3492Q1ZV"}, {"cc": "175634", "cn": "SHREE SIDDHALINGESHWARA PETROLEUM", "vc": "164341", "gstin": "29ADIPL2068G1ZE"}, {"cc": "176182", "cn": "GUNJIKAR PETROLEUMS", "vc": "190031", "gstin": "29AOIPM2882C1ZS"}, {"cc": "176328", "cn": "REVANASIDDESHWAR PETROLEUM", "vc": "164135", "gstin": "29BKVPK5613H1ZN"}, {"cc": "176349", "cn": "SHRI HANUMAN PETROLEUM", "vc": "170195", "gstin": ""}, {"cc": "176375", "cn": "S. S. KULKARNI PETROLEUM", "vc": "172776", "gstin": "29ACHFS6119D1Z1"}, {"cc": "176376", "cn": "MSTONES", "vc": "168243", "gstin": "29ANEPM0470F1Z4"}, {"cc": "176377", "cn": "SHREE KANAKA PETROLEUM", "vc": "165025", "gstin": "29AHUPH8337A1Z2"}, {"cc": "177338", "cn": "ANNAPURNESHWARI FUELS", "vc": "167739", "gstin": "29BDSPR0632P1ZO"}, {"cc": "177427", "cn": "SHRI MAHALINGESHWAR PETROLEUM", "vc": "167111", "gstin": "29BDAPA1592B1Z3"}, {"cc": "177876", "cn": "SHREE MALLIKARJUN TRADING CO.", "vc": "165138", "gstin": "29ABQPL8842C1Z8"}, {"cc": "179355", "cn": "SRI VEERESH PETROLEUM", "vc": "167659", "gstin": "29CUNPK5368Q1ZF"}, {"cc": "179832", "cn": "AL MEHBOOB PETROLEUM", "vc": "166920", "gstin": "29AEDPT8679K1ZF"}, {"cc": "180298", "cn": "BRAHMADEV PETROLEUM", "vc": "168789", "gstin": "29AXFPM1427R1ZV"}, {"cc": "180299", "cn": "NERLIKAR PETROLEUM", "vc": "168290", "gstin": "29ABZPN4461E1Z2"}, {"cc": "181985", "cn": "ROHIT PETROLEUMS", "vc": "167340", "gstin": "29BKRPP2410F1Z1"}, {"cc": "182422", "cn": "M P URABHINAVAR PETROLEUMS", "vc": "168148", "gstin": "29ACXPU1834D1Z2"}, {"cc": "182589", "cn": "SHARADAMBIKA PETROLEUMS", "vc": "167287", "gstin": "29ANSPP2734M1Z5"}, {"cc": "183501", "cn": "SHRI MALTESH PETROLEUMS", "vc": "173459", "gstin": "29AZPPM0949Q1ZA"}, {"cc": "183511", "cn": "SHIVAKASHI & SONS PETROLEUM", "vc": "168651", "gstin": "29AHXPH1369K1ZK"}, {"cc": "183538", "cn": "DESAI PETROLEUMS", "vc": "173299", "gstin": "29AHXPH6272M1ZC"}, {"cc": "183708", "cn": "BHAVANI PETROLEUM", "vc": "167614", "gstin": "29AOSPC8641K2Z9"}, {"cc": "184086", "cn": "RAHUL PETROLEUMS", "vc": "174525", "gstin": "29CLVPK5123L1ZE"}, {"cc": "184191", "cn": "JAYAM PETROLEUM", "vc": "167862", "gstin": "29AAIPH2055A1Z5"}, {"cc": "185375", "cn": "ANNAPOORNESWARI FUELS", "vc": "187012", "gstin": "29AMUPV4862F1Z5"}, {"cc": "185539", "cn": "SHREE HARI OM PETROLEUMS", "vc": "174537", "gstin": "29BVGPP6315R1ZP"}, {"cc": "186105", "cn": "DURGALAXMI PETROLEUM", "vc": "182757", "gstin": "29CEDPB3070E1ZX"}, {"cc": "186121", "cn": "OM PETROLEUM", "vc": "176082", "gstin": "29CPSPP3322P1ZZ"}, {"cc": "186713", "cn": "MORE PETROLEUMS", "vc": "175674", "gstin": "29AXWPM4437C1Z1"}, {"cc": "186714", "cn": "SHRINIVAS PETROLEUM", "vc": "354743", "gstin": "29AMXPA4992L1Z3"}, {"cc": "187575", "cn": "BUTALI PETROLEUM", "vc": "170505", "gstin": "29ANWPB4757A1ZT"}, {"cc": "188223", "cn": "S D ATAWALAGI", "vc": "172526", "gstin": "29AMAPA0770B1ZR"}, {"cc": "190040", "cn": "KIRAN PETROLEUM", "vc": "173534", "gstin": "29ASCPM7012N1ZF"}, {"cc": "192576", "cn": "BASAVESHWAR PETROLEUM", "vc": "173568", "gstin": "29BRRPB0498Q1ZU"}, {"cc": "194414", "cn": "VIJAYALAXMI PETROLEUMS", "vc": "355505", "gstin": "29AECPH1741K1ZJ"}, {"cc": "195495", "cn": "PADMAMBA PETROLEUM", "vc": "174950", "gstin": "29CBPPA2884N1ZX"}, {"cc": "196373", "cn": "SHRI MAHALAXMI PETROLEUMS", "vc": "177751", "gstin": "29AMQPH0749H1ZP"}, {"cc": "200530", "cn": "SHRI DANESHWARI PETROLEUM", "vc": "175853", "gstin": "29CBKPS4860B1ZD"}, {"cc": "200748", "cn": "SHAURYA PETROLEUM", "vc": "175648", "gstin": "29BQPPP9668F2ZS"}, {"cc": "210275", "cn": "NYAMAGOUDAR PETROLEUMS", "vc": "178514", "gstin": "29BARPN7813C2ZC"}, {"cc": "210539", "cn": "SMT SUSHEELAMMA.S.PATIL MEMORIAL", "vc": "182644", "gstin": "29ALVPP3745K1Z5"}, {"cc": "210997", "cn": "SHIVABASAV PETROLEUMS", "vc": "178533", "gstin": "29AMPPH1993Q1ZZ"}, {"cc": "211384", "cn": "GUTTANNAVAR PETROLEUMS", "vc": "178513", "gstin": "29AAUFG3151A1ZG"}, {"cc": "211867", "cn": "KAVERI PETROLEUM", "vc": "183640", "gstin": "29BAPPP2437Q2ZP"}, {"cc": "212311", "cn": "SHRI LAXMINARAYAN PETROLEUM", "vc": "178540", "gstin": "29AEAFS6872E1ZQ"}, {"cc": "212948", "cn": "SAI SHOBHA PETROLEUMS'S", "vc": "178595", "gstin": "29AMYPK6408J3Z7"}, {"cc": "213054", "cn": "DIXIT AGENCIES", "vc": "185299", "gstin": "29AAPFD5543G1Z4"}, {"cc": "213060", "cn": "POOJA PETROLEUM", "vc": "178534", "gstin": "29BBRPP2153E1ZE"}, {"cc": "213453", "cn": "MAHALAXMI PETROLEUM", "vc": "180251", "gstin": "29CNLPS7178D2Z9"}, {"cc": "213475", "cn": "SHRI SOMNATH PETROLEUM", "vc": "186460", "gstin": "29AEBFS6150C2Z5"}, {"cc": "214016", "cn": "SHRI ANJANEYA SMART FUELS", "vc": "180908", "gstin": "29ALZPL5157B2ZL"}, {"cc": "214279", "cn": "PATIL PETROLEUM", "vc": "190055", "gstin": "29EDBPP0517D1ZT"}, {"cc": "214288", "cn": "J G PETROLEUMS", "vc": "181337", "gstin": "29AQFPP1532M1ZI"}, {"cc": "176223", "cn": "SHRI MAYAKKADEVI PETROLEUM", "vc": "162704", "gstin": "29CNAPS4275C1ZV"}, {"cc": "176327", "cn": "SHRI VINAYAK PETROL PUMP", "vc": "163291", "gstin": "29AJVPM7261K1Z9"}, {"cc": "214355", "cn": "NYAMAGOUDAR PETROLEUM", "vc": "179475", "gstin": "29BISPG9608P1Z6"}, {"cc": "214418", "cn": "NISARGA PRIYA PUMP", "vc": "181491", "gstin": "29AVYPB6764F1ZY"}, {"cc": "176373", "cn": "NIMBA CITY PETROLEUM", "vc": "191105", "gstin": "29AEWPB8328J1ZU"}, {"cc": "176374", "cn": "VAISHNAVI PETROLEUMS", "vc": "163066", "gstin": ""}, {"cc": "176378", "cn": "ADARSH PETROLEUM", "vc": "164856", "gstin": "29BSUPM3460R1ZK"}, {"cc": "176386", "cn": "NETRAVATI PETROLEUM", "vc": "174499", "gstin": "29APFPS9380B1ZI"}, {"cc": "178311", "cn": "SRI BASAVESHWAR PETROLEUMS", "vc": "167168", "gstin": "29AKVPK6235A1ZY"}, {"cc": "178378", "cn": "SHRI MALATESH OIL TRADERS", "vc": "186763", "gstin": "29AQYPC3938K2Z1"}, {"cc": "178401", "cn": "HUGGI PETROLEUMS", "vc": "164151", "gstin": "29AIAPH9560J1ZX"}, {"cc": "178457", "cn": "SATYA RAM PETROLEUM", "vc": "167110", "gstin": "29AKQPB8512J1ZT"}, {"cc": "178458", "cn": "SUBHANALLAH PETROLEUM", "vc": "184585", "gstin": "29AICPH5586L3ZN"}, {"cc": "179740", "cn": "SMT. GANGAMMA S. PATIL MEMORIAL", "vc": "174474", "gstin": "29BNHPP3810L1ZM"}, {"cc": "178925", "cn": "SHRI SAI PETROLEUM", "vc": "164567", "gstin": ""}, {"cc": "180181", "cn": "SHRI MAHALAXMI PETROLEUM", "vc": "169995", "gstin": "29ACUPH5829E1Z5"}, {"cc": "180288", "cn": "BASAVA JYOTI PETROLEUM", "vc": "167280", "gstin": "29ACWPW1888Q1ZW"}, {"cc": "180300", "cn": "TIRTH PETROLEUM", "vc": "168380", "gstin": "29AFCPT5714M1ZW"}, {"cc": "180301", "cn": "DESAI BROTHERS", "vc": "186716", "gstin": "29ABSFM4556C1ZV"}, {"cc": "181600", "cn": "NAIKAR PETROLEUM", "vc": "174598", "gstin": "29AQMPN1057C1ZU"}, {"cc": "182420", "cn": "V B S", "vc": "169709", "gstin": "29AXVPS0695K1ZB"}, {"cc": "182646", "cn": "SHANMUKH PETROLEUM", "vc": "168257", "gstin": "29AELPJ8606A1ZJ"}, {"cc": "183502", "cn": "SHREE LAXMI PETROLEUM", "vc": "168147", "gstin": "29AFKPS0203G1ZK"}, {"cc": "183503", "cn": "SHREE NIDHI PETROLEUM", "vc": "168292", "gstin": "29BBHPK7205A1ZY"}, {"cc": "183534", "cn": "KEERTI PETROLEUMS", "vc": "170107", "gstin": ""}, {"cc": "183535", "cn": "BASAVASHREE PETROLEUM", "vc": "169796", "gstin": "29FHDPS6128A2Z9"}, {"cc": "183536", "cn": "P. V. PETROLEUMS", "vc": "355500", "gstin": "29ABXPV0941R1ZC"}, {"cc": "183949", "cn": "SANGMESHWAR PETROLEUMS", "vc": "167839", "gstin": "29BLZPS0337K2Z6"}, {"cc": "183537", "cn": "NIKHIL PETROLEUMS", "vc": "173464", "gstin": ""}, {"cc": "183667", "cn": "SHREE KALMESHWAR PETROLEUMS", "vc": "169864", "gstin": "29ABIPH2891K2Z5"}, {"cc": "183668", "cn": "DANESWARI PETROLEUM", "vc": "167962", "gstin": "29ACAPB5746J1ZK"}, {"cc": "183803", "cn": "SHIDESHWAR PETROLEUMS", "vc": "169919", "gstin": "29AUWPM4321J1Z1"}, {"cc": "184193", "cn": "PAWAR PETROLEUM", "vc": "188113", "gstin": "29EFUPS2057L1ZF"}, {"cc": "185357", "cn": "NEELAMMA PETROLEUMS", "vc": "168239", "gstin": "29BTPPM6274F1Z2"}, {"cc": "185442", "cn": "MRUTHYUNJAYA PETROLEUMS", "vc": "173461", "gstin": "29BLWPM6662A1ZL"}, {"cc": "185748", "cn": "HIREMATH PETROL BUNK", "vc": "173475", "gstin": "29AFUPH4770B1Z7"}, {"cc": "185448", "cn": "SRI MALTESH PETROLEUM", "vc": "173462", "gstin": "29AVAPB3911C1Z9"}, {"cc": "185865", "cn": "SHRI AMARESHWAR PETROLEUM", "vc": "174585", "gstin": "29BHTPB4705N1ZT"}, {"cc": "188602", "cn": "SAI PETROLEUM", "vc": "170503", "gstin": "29ATRPG5120D1ZS"}, {"cc": "193819", "cn": "BOLANNAVAR PETROLEUMS", "vc": "174528", "gstin": "29AIGPB8643J1ZZ"}, {"cc": "194240", "cn": "VENKATESHWAR PETROLEUMS", "vc": "175062", "gstin": "29AHOPL6207B1ZD"}, {"cc": "195314", "cn": "NOOR PETROLEUM", "vc": "177815", "gstin": "29BLKPM3697R1ZT"}, {"cc": "196368", "cn": "R P GULMI PETROLEUM", "vc": "178145", "gstin": "29AEJPG0317B1Z2"}, {"cc": "200277", "cn": "RANVEER PETROLEUMS", "vc": "185168", "gstin": "29AJDPH8538E1Z3"}, {"cc": "202300", "cn": "AVADHUT PETROLEUM", "vc": "180990", "gstin": "29AKWPC3200G1ZA"}, {"cc": "205603", "cn": "VIJAYALAXMI PETROLEUM", "vc": "184333", "gstin": "29IWOPK2641M1ZQ"}, {"cc": "206094", "cn": "SHRIMAHALAXMI PETROLEUM", "vc": "177931", "gstin": "29DJDPK5444P1ZJ"}, {"cc": "210715", "cn": "JANNU PETROLEUM", "vc": "178512", "gstin": "29ADYPJ2585J1ZN"}, {"cc": "211372", "cn": "ATHARV PETROLEUMS", "vc": "179424", "gstin": "29AEQPV2417N1ZM"}, {"cc": "214116", "cn": "BHAVESHWARI PETROLIUMS", "vc": "184406", "gstin": "29APLPP1406M2ZG"}, {"cc": "214239", "cn": "SHRI VINAYAK PETROLEUMS", "vc": "179620", "gstin": "29AECFS1224G1Z8"}, {"cc": "214248", "cn": "SHRI VENKATESHWARA PETROLEUM", "vc": "180927", "gstin": "29AXAPS9209C1ZD"}, {"cc": "214283", "cn": "BARKI PETROLEUM", "vc": "185141", "gstin": "29CLWPB2631M2ZK"}, {"cc": "215000", "cn": "NAROOTE PETROLEUM", "vc": "179476", "gstin": "29BQDPN8205N1ZB"}, {"cc": "215036", "cn": "SAROJA PETROLEUMS", "vc": "184481", "gstin": "29AIPPH6891M1Z8"}, {"cc": "215084", "cn": "GURU PETROLEUMS", "vc": "188170", "gstin": "29CMSPM7346F1ZD"}, {"cc": "215703", "cn": "ASHA BHARATI PETRO LINKS", "vc": "189731", "gstin": "29AQQPK8978B2Z2"}, {"cc": "215922", "cn": "PAVANAJA PETROLEUM", "vc": "184480", "gstin": "29AVXPP8449E1ZL"}, {"cc": "217267", "cn": "SRI BASAVA FILLING STATION", "vc": "372672", "gstin": "29CUUPP1197H1ZR"}, {"cc": "217590", "cn": "NYAMAGOUDAR PETROLEUMS KUNCHANUR", "vc": "178514", "gstin": "29BARPN7813C2ZC"}, {"cc": "218199", "cn": "KARUDI SMART FUELS", "vc": "188284", "gstin": "29APTPK2189Q1ZO"}, {"cc": "218390", "cn": "SHRISHTI PETROLEUMS", "vc": "184416", "gstin": "29ANQPL3969C1ZH"}, {"cc": "218431", "cn": "BALAJI PETROLEUM", "vc": "180115", "gstin": "29ACVPP8991J1Z8"}, {"cc": "219103", "cn": "SHRI ADAVISIDDESHWAR PETROLEUM", "vc": "181069", "gstin": "29ANZPH9662D1Z8"}, {"cc": "219105", "cn": "RAJ PETROLEUM", "vc": "180921", "gstin": "29CIQPP8091J1Z7"}, {"cc": "219219", "cn": "GOUTAM PETROLEUM", "vc": "181297", "gstin": "29BQMPK6247G1ZE"}, {"cc": "219401", "cn": "GANGA GANESH FILLING STATION", "vc": "186642", "gstin": "29AOFPH9960M1Z6"}, {"cc": "221680", "cn": "VIMALESHWARA PETROL PUMP", "vc": "186884", "gstin": "29AMUPV1670R1ZO"}, {"cc": "221738", "cn": "UPPIN MASTER PETROLEUM", "vc": "183265", "gstin": "29ACQPU3803M1ZT"}, {"cc": "221899", "cn": "KUMBAR PETROLEUM", "vc": "184415", "gstin": "29BBAPK1875K1ZC"}, {"cc": "222269", "cn": "SHREE BASAVESHWAR PETROLEUM", "vc": "182758", "gstin": "29AOEPH4962G1ZS"}, {"cc": "222701", "cn": "VEERALINGAYYANAMATH AND COMPANY", "vc": "184494", "gstin": "29AATFV2661H1ZJ"}, {"cc": "222916", "cn": "S.S.MELLIGERI", "vc": "180992", "gstin": "29DOFPM6217D1ZX"}, {"cc": "224761", "cn": "SHRI DURADUNDESHWAR PETROLEUM", "vc": "190253", "gstin": "29BCSPK3804M1ZZ"}, {"cc": "225352", "cn": "SRI JAGAJYOTI BASAVESHWAR PETROLEUM", "vc": "181335", "gstin": "29AFHPL3322G1ZK"}, {"cc": "226515", "cn": "SHREE SIDDHI VINAYAKA PETROLEUM", "vc": "181285", "gstin": "29BAVPN1234M2Z0"}, {"cc": "226516", "cn": "SHRI MAHALINGESHWAR PETROLEUMS", "vc": "183655", "gstin": "29AFZPW1330D1Z1"}, {"cc": "226535", "cn": "SAMARTH FUELPOINT", "vc": "189384", "gstin": "29ABVPH3335B1ZN"}, {"cc": "226562", "cn": "SHARIF PETROLEUM", "vc": "183033", "gstin": "29AEKFS3109L1ZL"}, {"cc": "227771", "cn": "ILAGER PETROLEUM", "vc": "185169", "gstin": "29ABMPI8990E2Z1"}, {"cc": "228062", "cn": "SHRI HERAMB PETROLEUM", "vc": "185139", "gstin": "29AXWPJ5630L1ZO"}, {"cc": "228128", "cn": "BHAGYALAXMI PETROLEUM", "vc": "183643", "gstin": "29CFKPK3620M1Z2"}, {"cc": "228253", "cn": "SHRI MAHALINGESHWAR PETROLEUMS", "vc": "183252", "gstin": "29AYPPA3468B3ZD"}, {"cc": "228312", "cn": "RENUKADEVI PETROLEUMS", "vc": "183919", "gstin": "29HGYPS4817N1ZY"}, {"cc": "228431", "cn": "JANNU PETROLEUM", "vc": "185872", "gstin": "29AFBPJ2804F1ZT"}, {"cc": "229501", "cn": "PAARVATI PETROLEUM", "vc": "184400", "gstin": "29ABZPH2956G1Z0"}, {"cc": "229641", "cn": "SAKSHI PETROLEUMS", "vc": "184464", "gstin": "29AVBPP7954N1ZO"}, {"cc": "230300", "cn": "ANNADANI PETROLEUMS", "vc": "183032", "gstin": "29EVPPM3775L1ZI"}, {"cc": "232688", "cn": "TONGALI PETROLEUM", "vc": "191084", "gstin": "29BDSPM7445P1ZC"}, {"cc": "233737", "cn": "SHRI SIDDHESHWAR PETROLEUM", "vc": "183707", "gstin": "29ASXPP6019P1ZI"}, {"cc": "233772", "cn": "AVALAKKI PETROLEUMS", "vc": "182756", "gstin": "29AIAPA5437D1ZP"}, {"cc": "234757", "cn": "S.K.RATHOD PETROLEUM", "vc": "182816", "gstin": "29BHDPR7318M2ZN"}, {"cc": "235078", "cn": "DESAI PETROLEUM", "vc": "184443", "gstin": "29AATFD6268L1ZH"}, {"cc": "236245", "cn": "ADARSH PETROLEUMS", "vc": "184583", "gstin": "29AKVPD5483D2ZQ"}, {"cc": "236532", "cn": "PENDARI PETROLEUM", "vc": "184271", "gstin": "29BOWPP9609D1Z5"}, {"cc": "237465", "cn": "SAI FUELS", "vc": "184996", "gstin": "29BUCPR3531G1ZK"}, {"cc": "238159", "cn": "HUBBALLI FUELS", "vc": "189915", "gstin": "29AARFH9948P1ZY"}, {"cc": "238971", "cn": "DOODHGANGA PETROLEUM", "vc": "189484", "gstin": "29AUMPC0888J1Z5"}, {"cc": "238982", "cn": "NYAMAGOUDAR PETROLEUMS", "vc": "184581", "gstin": "29ABZPN1178J1ZR"}, {"cc": "240726", "cn": "SHRI BRAHMANATH PETROLEUM", "vc": "189486", "gstin": "29BRXPP0395L1ZO"}, {"cc": "241623", "cn": "MAHATI PETROLEUMS", "vc": "187320", "gstin": "29BVHPK7519P2ZO"}, {"cc": "244774", "cn": "ANJANEYA FUELS", "vc": "186853", "gstin": "29AOIPD5796C3ZO"}, {"cc": "244925", "cn": "PARVATI PETROLEUMS", "vc": "186601", "gstin": "29GNKPS5201Q2Z3"}, {"cc": "245737", "cn": "GIRIJABASAVA PETROLEUM", "vc": "187097", "gstin": "29ADPPH3686P1ZI"}, {"cc": "246387", "cn": "R.H.PETROLEUM", "vc": "187974", "gstin": "29APXPA7663R1ZN"}, {"cc": "246774", "cn": "BELGAUM SUGARS PRIVATE LIMITED", "vc": "187081", "gstin": "29AAMCS6327F1Z0"}, {"cc": "247266", "cn": "SHREE BHAVANI RENUKA PETROLEUM", "vc": "187973", "gstin": "29AXCPJ2287M1ZZ"}, {"cc": "247302", "cn": "JEEVANKANTI PETROLEUMS", "vc": "191350", "gstin": "29BLNPJ2384R1Z3"}, {"cc": "247411", "cn": "DEVAASHISH PETROLEUMS", "vc": "187995", "gstin": "29ADWPS3172N2ZE"}, {"cc": "248758", "cn": "SAI NACHIKET PETROLEUMS", "vc": "188676", "gstin": "29ABXPU9759N3ZT"}, {"cc": "248759", "cn": "AMBIKA PETROLEUM", "vc": "190032", "gstin": "29BIOPP1728F1ZX"}, {"cc": "215064", "cn": "SUVARANA PETROLEUM", "vc": "180670", "gstin": "29BOIPA2982N2ZE"}, {"cc": "249232", "cn": "SOUBHAGYALAXMI PETROLEUM", "vc": "188585", "gstin": "29DREPK3002A1ZF"}, {"cc": "249893", "cn": "NAYAK PETROLEUMS", "vc": "189383", "gstin": "29BEAPN6825B1ZM"}, {"cc": "215698", "cn": "SHRI JAGANNATH PETROLEUM", "vc": "186879", "gstin": "29AMYPP9862D1Z1"}, {"cc": "216999", "cn": "VIJAY PETROLEUMS", "vc": "191086", "gstin": "29ASGPA6872N2Z4"}, {"cc": "218309", "cn": "SHRI ARIHANT PETROLEUM", "vc": "183642", "gstin": "29BXWPP5460P2Z4"}, {"cc": "218933", "cn": "SHRI MALLIKARJUN PETROLEUM", "vc": "187984", "gstin": "29ALTPR4678P1ZL"}, {"cc": "217253", "cn": "ROOPALI SERVICE CENTER", "vc": "180085", "gstin": "29AJOPP0989L2Z5"}, {"cc": "217642", "cn": "SHRI CHANNAGIRESHWAR PETROLIUMS", "vc": "180773", "gstin": "29APZPC7563E1ZB"}, {"cc": "217962", "cn": "SHRI GURU SANGAMESHWAR PETROLEUMS", "vc": "181336", "gstin": "29AEEFS3895P1ZY"}, {"cc": "218229", "cn": "SAI BABA PETROLEUM", "vc": "190249", "gstin": "29AIMPN3657Q2Z6"}, {"cc": "219162", "cn": "SIDDHASWAROOP FUEL POINT", "vc": "183709", "gstin": "29BYPPM9227F1ZT"}, {"cc": "219216", "cn": "SHRI MAHALAXMI PETROLEUMS- 1", "vc": "180022", "gstin": "29FIEPK5286H1ZR"}, {"cc": "221406", "cn": "SHRI ARANYA SIDDESHWAR PETROLEUM", "vc": "181487", "gstin": "29AIMPV4507B1Z3"}, {"cc": "222392", "cn": "GOLASHETTI PETROLEUM", "vc": "184489", "gstin": "29BIFPG3359A1ZI"}, {"cc": "223544", "cn": "SRINIVASA PETROLEUM", "vc": "180774", "gstin": "29AOQPD6407E1ZW"}, {"cc": "224666", "cn": "SHRI BASAV PETROLEUMS", "vc": "179803", "gstin": "29HNHPK6260F1ZO"}, {"cc": "224667", "cn": "YASHODHARA PETROLEUMS", "vc": "181338", "gstin": "29BTLPK3445E2ZI"}, {"cc": "224777", "cn": "AASHIRWAD FUELS", "vc": "183641", "gstin": "29DSWPK6945R1Z6"}, {"cc": "225047", "cn": "SHIVASHAKTI PETROLEUM", "vc": "181286", "gstin": "29AMZPK1896M4ZP"}, {"cc": "225903", "cn": "RASHTRAKUTA PETROLEUMS", "vc": "182755", "gstin": "29AUZPV9039P2ZV"}, {"cc": "228508", "cn": "NAMAKKAL GANESH FUELS", "vc": "184500", "gstin": "29AZZPS4282N2ZX"}, {"cc": "225655", "cn": "SHRI PATIL & SON'S PETROLEUM", "vc": "184987", "gstin": "29CCHPP9419B1ZC"}, {"cc": "225680", "cn": "BAARAKHUDA PETROLEUM", "vc": "184266", "gstin": "29BELPN0243L1Z6"}, {"cc": "225935", "cn": "KWALITY FUELS", "vc": "186658", "gstin": "29AAUPW9565A2ZS"}, {"cc": "226446", "cn": "SHIVA SERVICE STATION", "vc": "180986", "gstin": "29AGNPH7696A1ZZ"}, {"cc": "226421", "cn": "SHRI KAMAGIRI PETROLEUM", "vc": "180601", "gstin": "29CTPPD6796L1ZM"}, {"cc": "226534", "cn": "NEERALAGI PETROLEUM", "vc": "181298", "gstin": "29AMUPT5740N2ZU"}, {"cc": "228911", "cn": "J P PATIL PETROLEUM", "vc": "183905", "gstin": "29AVGPP0987N1ZO"}, {"cc": "235188", "cn": "JOSHI PETROLEUMS", "vc": "190307", "gstin": "29AASFJ0885C1Z0"}, {"cc": "238257", "cn": "SURYAKIRAN PETROLEUMS", "vc": "185296", "gstin": "29CJHPP5919H2ZN"}, {"cc": "239042", "cn": "SEVALAL PETROLIUMS", "vc": "184452", "gstin": "29ANJPP8018M2Z8"}, {"cc": "239271", "cn": "M G HINDALGEKAR PETROLEUM", "vc": "183902", "gstin": "29AWQPH4810H1ZB"}, {"cc": "240288", "cn": "SHRI PARMANAND PETROLEUM", "vc": "189909", "gstin": "29HXDPK1163D1ZK"}, {"cc": "240973", "cn": "RADDI PETROLEUM", "vc": "184305", "gstin": "29CGWPR6144J2ZD"}, {"cc": "242119", "cn": "MAHALASA FILLING STATION", "vc": "184985", "gstin": "29APIPK4349H3ZI"}, {"cc": "240797", "cn": "SHREE KALASAMMADEVI PETROLIEMS", "vc": "189264", "gstin": "29BHMPK3586P1ZA"}, {"cc": "241740", "cn": "S.S.B PETROLEUM'S", "vc": "189188", "gstin": "29CLHPB0664H1Z6"}, {"cc": "244833", "cn": "SHRI SIDDALINGA SHIVAYOGI PETROLEUM", "vc": "189313", "gstin": "29FBMPK1527G2ZF"}, {"cc": "245274", "cn": "MAHALAXMI FUEL PARK", "vc": "189555", "gstin": "29ATTPP9816B1Z2"}, {"cc": "245891", "cn": "SIDDIVINAYAK PETROLEUM", "vc": "188921", "gstin": "29ADZPW9252E1ZI"}, {"cc": "245920", "cn": "SHREE SAI PETROLEUM'S", "vc": "187083", "gstin": "29ANXPL2318J1ZE"}, {"cc": "246386", "cn": "SRI SAI FUEL STATION", "vc": "187975", "gstin": "29GZRPK2151N1ZK"}, {"cc": "246820", "cn": "PATIL PETROL PUMP", "vc": "187011", "gstin": "29ABEFP0494L1ZQ"}, {"cc": "248098", "cn": "SHRI DHANESHWARI PETROLEUM", "vc": "188851", "gstin": "29ANFPK3109G2Z4"}, {"cc": "250317", "cn": "R.A. SANSI PETROLEUM", "vc": "190096", "gstin": "29BPPPS7118G1Z9"}, {"cc": "250415", "cn": "SHRI HALASIDDESHWAR PETROLEUMS", "vc": "189061", "gstin": "29DOZPB2422D1ZX"}, {"cc": "251643", "cn": "BALAJI PETROLEUM", "vc": "190161", "gstin": "29ARLPM6537G1ZB"}, {"cc": "251768", "cn": "GUNJIKAR ENERGIZ", "vc": "190031", "gstin": "29AOIPM2882C1ZS"}, {"cc": "251824", "cn": "SRI MAILARLINGESHWARA PETROLEUMS", "vc": "190182", "gstin": "29AWKPC8234A2ZP"}, {"cc": "252291", "cn": "SHRI VENKATESHWAR PETROLEUMS", "vc": "191397", "gstin": "29AQWPK1459M1ZW"}, {"cc": "252674", "cn": "RAGHAVENDRA PETROLEUMS", "vc": "189060", "gstin": "29BPAPK4421F2Z5"}, {"cc": "252686", "cn": "S N GODI PETROLEUMS", "vc": "189297", "gstin": "29CRKPG9719H1Z8"}, {"cc": "254187", "cn": "SHIVNANDI PETROLEUM", "vc": "189800", "gstin": "29CRWPM8535P1ZD"}, {"cc": "254279", "cn": "KAVITARAJ PETROLEUM", "vc": "190284", "gstin": "29CXJPK8061P1ZJ"}, {"cc": "254281", "cn": "GK PETROLEUM", "vc": "191153", "gstin": "29DDXPK4783F1ZP"}, {"cc": "255985", "cn": "MAHALAXMI FUEL CENTER", "vc": "190196", "gstin": "29BWBPK6261P1ZW"}, {"cc": "256016", "cn": "ARAHANT PETROLEUMS", "vc": "191212", "gstin": "29HTZPK0497Q1Z4"}, {"cc": "256021", "cn": "DURGA PETROLEUMS", "vc": "191040", "gstin": "29EFIPS8369H2ZG"}, {"cc": "256743", "cn": "SRI LAKSHMI VENKATESHWARA PETROLEUM", "vc": "190367", "gstin": "29BBYPA4569C1ZA"}, {"cc": "256888", "cn": "PAWAR PETROLEUM ADHOC", "vc": "188113", "gstin": "29EFUPS2057L1ZF"}, {"cc": "256998", "cn": "SANKAPAL PETROLEUM", "vc": "191003", "gstin": "29DXRPS1275N1ZC"}, {"cc": "258183", "cn": "UNITED ENERGY AND FUELS", "vc": "190455", "gstin": "29ACKPT0195M2ZS"}, {"cc": "258748", "cn": "JAI MATRUBHOOMI PETROLEUMS", "vc": "191083", "gstin": "29CXNPM1320D1ZM"}, {"cc": "259016", "cn": "VEERABHADRESHWAR PETROLEUM", "vc": "191129", "gstin": "29ANEPH8535N1ZE"}, {"cc": "259120", "cn": "AZAD PET & DIE OIL DEALERS ADHOC", "vc": "333816", "gstin": "29AADFA1202D1Z9"}, {"cc": "250422", "cn": "T. R. ASSOCIATES", "vc": "188933", "gstin": "29AAWFT0324J1ZP"}, {"cc": "259488", "cn": "SHRI MAHALINGESHWAR PETROLEUMSADHOC", "vc": "183252", "gstin": "29AYPPA3468B3ZD"}, {"cc": "253500", "cn": "SHREE HOLEMMA PETROLEUM", "vc": "189546", "gstin": "29AKKPH1916J1ZZ"}, {"cc": "255107", "cn": "JAI GOMATESH PETROLEUM", "vc": "191187", "gstin": "29CAVPK9137M1ZL"}, {"cc": "255199", "cn": "SRI KANTESHA FUEL STATION", "vc": "190320", "gstin": "29DXSPM5201D1ZC"}, {"cc": "256066", "cn": "SHARDA PETROLEUM", "vc": "191274", "gstin": "29AFFFS4806N1ZE"}, {"cc": "256740", "cn": "GAJALAKSHMI PETROLEUM", "vc": "191264", "gstin": "29AEIPR4819J1ZW"}, {"cc": "261179", "cn": "YATTINAHALLI PETROLEUM", "vc": "191232", "gstin": "29AADFY8440R1Z6"}];
+    const VC_MAP = {};
+    const NAME_MAP = {};
+    VC_DATA.forEach(r => {
+      VC_MAP[r.cc] = r;
+      if (r.cn) NAME_MAP[r.cn.trim().toUpperCase()] = r;
+    });
+
+    // --- Predefined SAP Database ---
+    const OUTLET_DB = {
+      "156576": {
+        custName: "SHIVAM PETROLEUM GADAG",
+        vendorCode: "333810",
+        gstin: "29AAHFB1380P1Z0",
+        discomName: "HESCOM",
+        rrNo: "HES-981242",
+        ratePerUnit: 4.50,
+        consumedUnits: 3868.30,
+        chargerDesc: "Delta 60kW Dual Gun CCS2 Charger",
+        meterRR: "MTR-10294 / HESCOM"
+      },
+      "1312": {
+        custName: "DESUR CO-OP DEPOT BELAGAVI",
+        vendorCode: "131200",
+        gstin: "29AAACB2902M1ZP",
+        discomName: "HESCOM",
+        rrNo: "HES-441200",
+        ratePerUnit: 4.50,
+        consumedUnits: 3868.30,
+        chargerDesc: "EV Power Charger 60kW CCS2",
+        meterRR: "MTR-44120 / HESCOM"
+      },
+      "159820": {
+        custName: "BELAGAVI RETAIL OUTLET (NH4)",
+        vendorCode: "334120",
+        gstin: "29AAACB2902M1ZP",
+        discomName: "HESCOM",
+        rrNo: "HES-771829",
+        ratePerUnit: 4.50,
+        consumedUnits: 4250.00,
+        chargerDesc: "Delta 60kW Dual Gun Charger",
+        meterRR: "MTR-77182 / HESCOM"
+      },
+      "182410": {
+        custName: "HUBLI FAST-CHARGE EV STATION",
+        vendorCode: "339850",
+        gstin: "29AAACH1111M1Z1",
+        discomName: "HESCOM",
+        rrNo: "HES-339102",
+        ratePerUnit: 5.00,
+        consumedUnits: 1850.50,
+        chargerDesc: "ABB Terra 184 DC Fast Charger",
+        meterRR: "MTR-33910 / HESCOM"
+      },
+      "204190": {
+        custName: "BANGALORE METRO EV OUTLET",
+        vendorCode: "341290",
+        gstin: "29AAACB2902M1ZP",
+        discomName: "BESCOM",
+        rrNo: "BES-992145",
+        ratePerUnit: 5.50,
+        consumedUnits: 5120.00,
+        chargerDesc: "Exicom Spin 240kW Ultra Fast Charger",
+        meterRR: "MTR-99214 / BESCOM"
+      },
+      "210940": {
+        custName: "MUMBAI-PUNE EXPRESSWAY EV HUB",
+        vendorCode: "351820",
+        gstin: "27AAACB2902M1ZP",
+        discomName: "MSEDCL",
+        rrNo: "MSD-882104",
+        ratePerUnit: 6.00,
+        consumedUnits: 6240.20,
+        chargerDesc: "Servotech 150kW Dual Gun Charger",
+        meterRR: "MTR-88210 / MSEDCL"
+      }
+    };
+
+    // --- File Upload Handlers ---
+    function handleFileUpload(evt, type) {
+      const file = evt.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        if (type === 'bill') {
+          billImageBase64 = dataUrl;
+          renderDropzone('dz-bill', 'file-bill', 'Electricity Bill Image', dataUrl, 'bill');
+          toast('✔ Electricity bill image attached!');
+        } else if (type === 'receipt') {
+          receiptImageBase64 = dataUrl;
+          renderDropzone('dz-receipt', 'file-receipt', 'Payment Receipt Image', dataUrl, 'receipt');
+          toast('✔ Payment receipt image attached!');
+        }
+        updateToggleButtons();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderDropzone(dzId, inputId, title, dataUrl, type) {
+      const dz = $(dzId);
+      dz.classList.add('has-file');
+      dz.innerHTML = `
+        <input type="file" id="${inputId}" accept="image/*" style="display:none" onchange="handleFileUpload(event, '${type}')">
+        <button type="button" class="dropzone-remove" onclick="event.stopPropagation(); removeFile('${type}')">×</button>
+        <div class="dropzone-icon"><i class="fa-solid fa-circle-check"></i></div>
+        <div class="dropzone-title">${title}</div>
+        <img src="${dataUrl}" class="dropzone-preview-img">
+        <div class="dropzone-hint" style="margin-top:6px;color:#2E7D32;font-weight:600;">Click to replace file</div>
+      `;
+    }
+
+    function removeFile(type) {
+      if (type === 'bill') {
+        billImageBase64 = null;
+        const dz = $('dz-bill');
+        dz.classList.remove('has-file');
+        dz.innerHTML = `
+          <input type="file" id="file-bill" accept="image/*" style="display:none" onchange="handleFileUpload(event, 'bill')">
+          <div class="dropzone-icon"><i class="fa-solid fa-file-invoice"></i></div>
+          <div class="dropzone-title">Electricity Bill / Supporting Bill Image</div>
+          <div class="dropzone-sub">Tap to capture or upload</div>
+          <div class="dropzone-hint">Camera · JPG, PNG — Bill page</div>
+        `;
+        toast('Bill image removed');
+      } else if (type === 'receipt') {
+        receiptImageBase64 = null;
+        const dz = $('dz-receipt');
+        dz.classList.remove('has-file');
+        dz.innerHTML = `
+          <input type="file" id="file-receipt" accept="image/*" style="display:none" onchange="handleFileUpload(event, 'receipt')">
+          <div class="dropzone-icon"><i class="fa-solid fa-receipt"></i></div>
+          <div class="dropzone-title">Payment Receipt Image</div>
+          <div class="dropzone-sub">Tap to capture or upload</div>
+          <div class="dropzone-hint">Camera · JPG, PNG — Payment receipt</div>
+        `;
+        toast('Payment receipt removed');
+      }
+      updateToggleButtons();
+    }
+
+    function updateToggleButtons() {
+      const grp = $('docTypeToggleGroup');
+      grp.innerHTML = `
+        <button class="doc-type-btn ${currentDocType === 'letter' ? 'active' : ''}" id="btn-doc-letter" onclick="switchDocType('letter')">Reimbursement Letter</button>
+        <button class="doc-type-btn ${currentDocType === 'tax' ? 'active' : ''}" id="btn-doc-tax" onclick="switchDocType('tax')">GST e-Invoice</button>
+        ${billImageBase64 ? `<button class="doc-type-btn ${currentDocType === 'bill' ? 'active' : ''}" id="btn-doc-bill" onclick="switchDocType('bill')">Supporting Bill</button>` : ''}
+        ${receiptImageBase64 ? `<button class="doc-type-btn ${currentDocType === 'receipt' ? 'active' : ''}" id="btn-doc-receipt" onclick="switchDocType('receipt')">Payment Receipt</button>` : ''}
+      `;
+    }
+
+    // --- Select Quick SAP Chip ---
+    function selectSAP(code) {
+      $('custCode').value = code;
+      autoLookupSAP();
+    }
+
+    // --- Dynamic Invoice Suffix Generator ---
+    function genInvSuffix(cc, bDate, rr) {
+      if (bDate) {
+        const parts = bDate.split('-');
+        if (parts.length === 3) {
+          const yy = parts[0].slice(-2);
+          const mm = parts[1];
+          return yy + mm + '01';
+        }
+      }
+      return '0001';
+    }
+
+    // --- Auto Lookup SAP Code ---
+    function autoLookupSAP() {
+      const code = $('custCode').value.trim();
+      const badgeEl = $('cc-badge');
+
+      if (!code) {
+        $('invNo').value = '';
+        if (badgeEl) { badgeEl.style.display = 'none'; }
+        return;
+      }
+
+      const bDate = $('billDate')?.value || '';
+      const rrNo = $('rrNo')?.value || '';
+      $('invNo').value = code + '/EV' + genInvSuffix(code, bDate, rrNo);
+
+      let matched = false;
+
+      // 1) VC Mapping lookup (353 outlets)
+      const vcRec = VC_MAP[code];
+      if (vcRec) {
+        if (vcRec.cn) $('custName').value = vcRec.cn;
+        if (vcRec.vc) $('vendorCode').value = vcRec.vc;
+        if (vcRec.gstin) $('gstin').value = vcRec.gstin;
+        matched = true;
+      }
+
+      // 2) Predefined EVCS DB overlay (for DISCOM / Charger specific defaults)
+      const evcsRec = OUTLET_DB[code];
+      if (evcsRec) {
+        if (evcsRec.custName) $('custName').value = evcsRec.custName;
+        if (evcsRec.vendorCode) $('vendorCode').value = evcsRec.vendorCode;
+        if (evcsRec.gstin) $('gstin').value = evcsRec.gstin;
+        if (evcsRec.discomName) $('discomName').value = evcsRec.discomName;
+        if (evcsRec.rrNo) $('rrNo').value = evcsRec.rrNo;
+        if (evcsRec.ratePerUnit) $('ratePerUnit').value = evcsRec.ratePerUnit;
+        if (evcsRec.consumedUnits) $('consumedUnits').value = evcsRec.consumedUnits;
+        if (evcsRec.chargerDesc) $('chargerDesc').value = evcsRec.chargerDesc;
+        if (evcsRec.meterRR) $('meterRR').value = evcsRec.meterRR;
+        matched = true;
+      }
+
+      if (badgeEl) {
+        if (matched) {
+          const cn = (vcRec && vcRec.cn) || (evcsRec && evcsRec.custName) || '';
+          badgeEl.textContent = '✓ Matched' + (cn ? ' (' + cn + ')' : '');
+          badgeEl.style.background = '#dcfce7';
+          badgeEl.style.color = '#16a34a';
+          badgeEl.style.display = 'block';
+          toast('✔ Auto-populated data for SAP Code: ' + code);
+        } else if (code.length >= 5) {
+          badgeEl.textContent = '✗ SAP Code not in database';
+          badgeEl.style.background = '#fee2e2';
+          badgeEl.style.color = '#dc2626';
+          badgeEl.style.display = 'block';
+        } else {
+          badgeEl.style.display = 'none';
+        }
+      }
+
+      recalc();
+    }
+
+    // --- Reverse Lookup by Outlet Name ---
+    function autoLookupOutletName() {
+      const name = $('custName')?.value.trim().toUpperCase();
+      if (!name) return;
+      const match = NAME_MAP[name];
+      if (match && match.cc) {
+        if ($('custCode').value !== match.cc) {
+          $('custCode').value = match.cc;
+          autoLookupSAP();
+        }
+      }
+    }
+
+    // --- Recalculate Totals ---
+    function recalc() {
+      const units = parseFloat($('consumedUnits')?.value || 0) || 0;
+      const rate = parseFloat($('ratePerUnit')?.value || 0) || 0;
+      const addl = parseFloat($('addlAmt')?.value || 0) || 0;
+
+      const base = units * rate;
+      const tot = base + addl;
+
+      if ($('sb-units')) $('sb-units').textContent = units.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kWh';
+      if ($('sb-rate')) $('sb-rate').textContent = '₹' + rate.toFixed(2);
+      if ($('sb-base')) $('sb-base').textContent = '₹' + base.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if ($('sb-tot')) $('sb-tot').textContent = '₹' + tot.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if ($('gtCell')) $('gtCell').textContent = fmtMoney(tot);
+    }
+
+    // --- Helper Functions ---
+    function fmtDate(d) {
+      if (!d) return '—';
+      const [y, m, dd] = d.split('-');
+      return `${dd}/${m}/${y}`;
+    }
+    function fmtMoney(v) {
+      return '₹' + (+v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function rsPlain(v) {
+      return 'Rs.' + (+v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '/-';
+    }
+    function numWords(n) {
+      const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+        'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+        'Seventeen', 'Eighteen', 'Nineteen'];
+      const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+      function t(x) {
+        if (!x) return '';
+        if (x < 20) return a[x] + ' ';
+        if (x < 100) return b[Math.floor(x / 10)] + ' ' + (a[x % 10] ? a[x % 10] + ' ' : '');
+        return a[Math.floor(x / 100)] + ' Hundred ' + (x % 100 ? t(x % 100) : '');
+      }
+      let mainPart = Math.floor(n || 0);
+      let paisePart = Math.round(((n || 0) - mainPart) * 100);
+      let w = '', x = mainPart;
+      if (x >= 10000000) { w += t(Math.floor(x / 10000000)) + 'Crore '; x %= 10000000; }
+      if (x >= 100000) { w += t(Math.floor(x / 100000)) + 'Lakh '; x %= 100000; }
+      if (x >= 1000) { w += t(Math.floor(x / 1000)) + 'Thousand '; x %= 1000; }
+      w += t(x);
+      let res = w.trim();
+      if (paisePart > 0) {
+        let pw = t(paisePart).trim();
+        res += ' and ' + pw + ' Paise';
+      }
+      return res + ' Only';
+    }
+
+    // --- Validation ---
+    function validate() {
+      const req = [
+        ['custCode', 'fc-cc'], ['custName', 'fc-cn'],
+        ['invDate', 'fc-id'], ['vendorCode', 'fc-vc'],
+        ['gstin', 'fc-gstin'],
+        ['discomName', 'fc-discom'], ['rrNo', 'fc-rr'], ['billDate', 'fc-bd'], ['billPeriod', 'fc-bp'],
+        ['consumedUnits', 'fc-units']
+      ];
+      let ok = true;
+      req.forEach(([id, fid]) => {
+        const el = $(id), f = $(fid);
+        if (!el || !el.value.trim()) { if (f) f.classList.add('err'); ok = false; }
+        else { if (f) f.classList.remove('err'); }
+      });
+      return ok;
+    }
+
+    // --- Switch Document Type in Preview ---
+    function switchDocType(type) {
+      currentDocType = type;
+      updateToggleButtons();
+
+      const host = $('previewHost');
+      if (type === 'bill' && billImageBase64) {
+        host.innerHTML = `<div style="padding:20px;text-align:center;background:#525659;min-height:400px;"><img src="${billImageBase64}" style="max-width:100%;max-height:750px;box-shadow:0 4px 16px rgba(0,0,0,0.5);border-radius:4px;"></div>`;
+      } else if (type === 'receipt' && receiptImageBase64) {
+        host.innerHTML = `<div style="padding:20px;text-align:center;background:#525659;min-height:400px;"><img src="${receiptImageBase64}" style="max-width:100%;max-height:750px;box-shadow:0 4px 16px rgba(0,0,0,0.5);border-radius:4px;"></div>`;
+      } else {
+        host.innerHTML = buildInvoiceHTML(type);
+        if (type === 'tax') {
+          const gstin = $('gstin').value.trim() || '29AAHFB1380P1Z0';
+          const invNo = $('invNo').value.trim() || '43/26-27';
+          const invDate = fmtDate($('invDate').value);
+          const units = parseFloat($('consumedUnits').value || 0) || 0;
+          const rate = parseFloat($('ratePerUnit').value || 0) || 4.50;
+          const addl = parseFloat($('addlAmt').value || 0) || 0;
+          const total = (units * rate) + addl;
+          renderQRCode(gstin, invNo, invDate, total);
+        }
+      }
+    }
+
+    // --- Render QR Code ---
+    function renderQRCode(gstin, invNo, date, total) {
+      setTimeout(() => {
+        const qrBox = document.getElementById('qrcode-box-target');
+        if (!qrBox) return;
+        qrBox.innerHTML = '';
+        let text = `GSTIN:${gstin}|INV:${invNo}|DATE:${date}|TOTAL:${total}`;
+        if (window.QRCode) {
+          new QRCode(qrBox, {
+            text: text,
+            width: 80,
+            height: 80,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        }
+      }, 50);
+    }
+
+    // --- Build Invoice HTML ---
+    function buildInvoiceHTML(type = 'letter') {
+      const cc = $('custCode').value.trim();
+      const cn = $('custName').value.trim().toUpperCase();
+      const invNo = $('invNo').value.trim() || cc + '/EV0001';
+      const invDate = $('invDate').value;
+      const vc = $('vendorCode').value.trim();
+      const gstin = $('gstin').value.trim().toUpperCase();
+      const discom = $('discomName').value.trim();
+      const rrNo = $('rrNo').value.trim();
+      const bDate = $('billDate').value;
+      const bPeriod = $('billPeriod').value.trim();
+      const rate = parseFloat($('ratePerUnit').value || 0) || 4.50;
+      const units = parseFloat($('consumedUnits').value || 0) || 0;
+      const desc = $('chargerDesc').value.trim() || 'Delta 60kW Dual CCS2 EV Charger';
+      const meter = $('meterRR').value.trim() || rrNo;
+      const addl = parseFloat($('addlAmt').value || 0) || 0;
+      const sac = '996912';
+
+      const base = units * rate;
+      const total = base + addl;
+
+      const addlRow = addl > 0 ? `
+        <tr>
+          <td colspan="4" style="border:1px solid #444;padding:6px 7px;text-align:right;font-weight:bold;">Additional Fixed / Demand Charges</td>
+          <td style="border:1px solid #444;padding:6px 7px;text-align:center;font-weight:bold;">${rsPlain(addl)}</td>
+          <td style="border:1px solid #444;padding:6px 7px;"></td>
+        </tr>` : '';
+
+      if (type === 'letter') {
+        // --- TYPE 1: BPCL Territory Manager Reimbursement Letter with Dealership Letterhead ---
+        return `
+        <div class="inv-doc-wrapper" style="width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;display:flex;justify-content:center;">
+        <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000;background:#fff;width:794px;min-width:794px;padding:28px 34px;line-height:1.4;box-sizing:border-box;">
+          <!-- BPCL Dealership Header with Logo -->
+          <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px double #003399;padding-bottom:8px;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:15px;">
+              <img src="data:image/webp;base64,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" style="max-height:65px;width:auto;" alt="BPCL Logo">
+            <div style="text-align:left;"><div style="font-size:17px;font-weight:bold;color:#003399;letter-spacing:.5px;text-transform:uppercase;">${cn || 'BHARAT PETROLEUM DEALERSHIP'}</div><div style="font-size:12px;font-weight:bold;color:#F5A623;letter-spacing:1px;margin-top:2px;">BPCL DEALERSHIP</div><div style="font-size:10px;color:#444;margin-top:2px;">Dealers : Bharat Petroleum Corporation Ltd.</div></div></div>
+            <div style="flex:0 0 160px;text-align:right;font-size:10.5px;line-height:1.4;color:#333;">
+              <div><strong>GSTIN:</strong> ${gstin || 'N/A'}</div>
+              <div><strong>Cust Code:</strong> ${cc}</div>
+              <div><strong>Vendor Code:</strong> ${vc}</div>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">
+            <div style="font-size:11px;color:#555;">REIMBURSEMENT REQUEST LETTER</div>
+            <div style="text-align:right;font-size:11.5px;line-height:1.7;">
+              <div><strong>DATE:</strong> ${fmtDate(invDate)}</div>
+              <div><strong>INVOICE NO:</strong> ${invNo}</div>
+              <div><strong>SAC / HSN CODE:</strong> ${sac}</div>
+            </div>
+          </div>
+
+          <div style="font-size:12px;margin-bottom:10px;line-height:1.75;">
+            <div>To,</div>
+            <div><strong>THE TERRITORY MANAGER</strong></div>
+            <div><strong>B.P.C.L – RETAIL</strong></div>
+          </div>
+
+          <div style="font-size:12px;font-weight:bold;margin-bottom:10px;line-height:1.6;">
+            SUB:&nbsp; REQUEST FOR REIMBURSEMENT OF ELECTRICITY / POWER CHARGES FOR EV CHARGING STATION (EVCS)
+            FOR THE PERIOD ${bPeriod.toUpperCase()}.&nbsp; SAP: <u>${cc}</u> (VC: <u>${vc}</u>)
+          </div>
+
+          <div style="margin-bottom:8px;font-size:12px;">Respected Sir / Madam,</div>
+
+          <div style="font-size:12px;margin-bottom:12px;text-align:justify;line-height:1.7;">
+            Electricity / Power charges were incurred for the operation of EV Charging Station (EVCS) installed at our retail outlet (${cn}).
+            Please find enclosed herewith the original DISCOM Electricity Bill (${discom}) and payment receipt for reimbursement of the same. Details are as under:
+          </div>
+
+          <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:11.5px;">
+            <thead>
+              <tr style="background:#fff;">
+                <th style="border:1px solid #444;padding:6px 7px;text-align:center;vertical-align:middle;font-size:11px;">S<br>No</th>
+                <th style="border:1px solid #444;padding:6px 7px;text-align:center;vertical-align:middle;font-size:11px;">EV CHARGER MAKE &amp;<br>SERIAL NO / GUN TYPE</th>
+                <th style="border:1px solid #444;padding:6px 7px;text-align:center;vertical-align:middle;font-size:11px;">METER READING / RR No.<br>&amp; DATE</th>
+                <th style="border:1px solid #444;padding:6px 7px;text-align:center;vertical-align:middle;font-size:11px;">UNITS (kWh) &amp; RATE</th>
+                <th style="border:1px solid #444;padding:6px 7px;text-align:center;vertical-align:middle;font-size:11px;">AMOUNT (₹)</th>
+                <th style="border:1px solid #444;padding:6px 7px;text-align:center;vertical-align:middle;font-size:11px;">BILL NO. / REF<br>&amp; DATE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border:1px solid #444;padding:6px 7px;text-align:center;vertical-align:middle;">1</td>
+                <td style="border:1px solid #444;padding:6px 7px;text-align:left;font-weight:bold;vertical-align:middle;">${desc}</td>
+                <td style="border:1px solid #444;padding:6px 7px;text-align:center;vertical-align:middle;">${meter}</td>
+                <td style="border:1px solid #444;padding:6px 7px;text-align:center;vertical-align:middle;">${units.toFixed(2)} kWh @ ₹${rate.toFixed(2)}</td>
+                <td style="border:1px solid #444;padding:6px 7px;text-align:center;vertical-align:middle;font-weight:bold;">${rsPlain(base)}</td>
+                <td style="border:1px solid #444;padding:6px 7px;text-align:center;vertical-align:middle;">Bill Dt: ${fmtDate(bDate)}</td>
+              </tr>
+            </tbody>
+            ${addlRow}
+          </table>
+
+          <div style="font-size:12px;margin-bottom:14px;">
+            <strong>Total Amount Claimed: ${rsPlain(total)}</strong>
+            &emsp;(<em>Rupees ${numWords(total)}</em>)
+          </div>
+
+          <div style="font-size:12px;line-height:1.85;">
+            <div>Kindly reimburse the same at the earliest and oblige.</div>
+            <br>
+            <div>Thanking You,</div>
+            <div>Yours faithfully,</div>
+          </div>
+
+          <div style="font-size:11.5px;margin-top:8px;color:#333;">
+            <strong>${cn}</strong> &nbsp;|&nbsp; Customer Code: ${cc} &nbsp;|&nbsp; Vendor Code: ${vc}
+          </div>
+
+          <div style="display:flex;justify-content:flex-start;margin-top:36px;">
+            <div style="text-align:center;width:42%;">
+              <div style="height:36px;border-bottom:1px solid #666;margin-bottom:5px;"></div>
+              <div style="font-size:10.5px;color:#444;">Dealer / Outlet Owner Signature</div>
+              <div style="font-size:11px;font-weight:600;margin-top:2px;">${cn}</div>
+            </div>
+          </div>
+        </div>
+        </div>`;
+      } else {
+        // --- TYPE 2: Standard GST e-Invoice Format ---
+        let taxable = base + addl;
+        let cgst = (taxable * 0.09).toFixed(2);
+        let sgst = (taxable * 0.09).toFixed(2);
+        let totTax = (parseFloat(cgst) + parseFloat(sgst)).toFixed(2);
+        let grandTotal = parseFloat((taxable + parseFloat(totTax)).toFixed(2));
+
+        return `
+        <div class="inv-doc-wrapper" style="width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;display:flex;justify-content:center;">
+        <div style="font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#000;background:#fff;width:794px;min-width:794px;padding:20px 24px;line-height:1.25;box-sizing:border-box;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <div style="font-size:14pt;font-weight:bold;">Tax Invoice</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:11pt;font-weight:bold;">e-Invoice</div>
+              <div id="qrcode-box-target" style="width:80px;height:80px;border:1px solid #ccc;margin-left:auto;padding:2px;"></div>
+            </div>
+          </div>
+
+          <div style="border:1px solid #000;">
+            <div style="display:flex;border-bottom:1px solid #000;">
+              <div style="width:50%;padding:4px 6px;border-right:1px solid #000;">
+                <strong style="font-size:9.5pt;">${cn}</strong><br>
+                <span>Supplier Address, Belgaum</span><br>
+                <strong>GSTIN/UIN:</strong> ${gstin}<br>
+                <strong>State:</strong> Karnataka, <strong>Code:</strong> 29
+              </div>
+              <div style="width:50%;padding:4px 6px;">
+                <div style="display:flex;justify-content:space-between;">
+                  <div><strong>Invoice No.</strong><br><strong>${invNo}</strong></div>
+                  <div><strong>Dated</strong><br><strong>${fmtDate(invDate)}</strong></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;border-bottom:1px solid #000;">
+              <div style="width:50%;padding:4px 6px;border-right:1px solid #000;">
+                <div style="font-size:8pt;text-decoration:underline;">Buyer (Bill to)</div>
+                <strong style="font-size:9.5pt;">Bharat Petroleum Corporation Limited</strong><br>
+                <span>Desur Co-Op Depot ( 1312 ), Zadshahapur, Nr Desur Rly Stn, Desur- 590014</span><br>
+                <strong>GSTIN/UIN :</strong> 29AAACB2902M1ZP<br>
+                <strong>State :</strong> Karnataka, <strong>Code :</strong> 29
+              </div>
+              <div style="width:50%;padding:4px 6px;">
+                <div><strong>Ref Bill No / Month:</strong> ${discom} - ${bPeriod}</div>
+                <div><strong>Consumer Account / RR No:</strong> ${rrNo}</div>
+              </div>
+            </div>
+
+            <table style="width:100%;border-collapse:collapse;font-size:8.5pt;">
+              <thead>
+                <tr style="border-bottom:1px solid #000;">
+                  <th style="padding:4px;border-right:1px solid #000;text-align:center;">Sl</th>
+                  <th style="padding:4px;border-right:1px solid #000;text-align:left;">Description of Services</th>
+                  <th style="padding:4px;border-right:1px solid #000;text-align:center;">HSN/SAC</th>
+                  <th style="padding:4px;border-right:1px solid #000;text-align:right;">Quantity</th>
+                  <th style="padding:4px;border-right:1px solid #000;text-align:right;">Rate</th>
+                  <th style="padding:4px;text-align:right;">Amount (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom:1px solid #000;">
+                  <td style="padding:4px;text-align:center;border-right:1px solid #000;">1</td>
+                  <td style="padding:4px;border-right:1px solid #000;">
+                    <strong>Reimbursement of EV Electricity Charges</strong><br>
+                    <small>${discom} Bill Amount for ${bPeriod} (${desc})</small>
+                  </td>
+                  <td style="padding:4px;text-align:center;border-right:1px solid #000;">${sac}</td>
+                  <td style="padding:4px;text-align:right;border-right:1px solid #000;">${units.toFixed(2)} Units</td>
+                  <td style="padding:4px;text-align:right;border-right:1px solid #000;">${rate.toFixed(2)}</td>
+                  <td style="padding:4px;text-align:right;font-weight:bold;">${base.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:4px;border-right:1px solid #000;"></td>
+                  <td style="padding:4px;text-align:right;border-right:1px solid #000;"><strong>CGST @ 9%</strong></td>
+                  <td style="border-right:1px solid #000;"></td><td style="border-right:1px solid #000;"></td><td style="border-right:1px solid #000;"></td>
+                  <td style="padding:4px;text-align:right;font-weight:bold;">${cgst}</td>
+                </tr>
+                <tr style="border-bottom:1px solid #000;">
+                  <td style="padding:4px;border-right:1px solid #000;"></td>
+                  <td style="padding:4px;text-align:right;border-right:1px solid #000;"><strong>SGST @ 9%</strong></td>
+                  <td style="border-right:1px solid #000;"></td><td style="border-right:1px solid #000;"></td><td style="border-right:1px solid #000;"></td>
+                  <td style="padding:4px;text-align:right;font-weight:bold;">${sgst}</td>
+                </tr>
+                <tr style="font-weight:bold;background:#fafafa;">
+                  <td style="padding:4px;border-right:1px solid #000;"></td>
+                  <td style="padding:4px;text-align:right;border-right:1px solid #000;">Total Claimable Amount</td>
+                  <td style="border-right:1px solid #000;"></td>
+                  <td style="padding:4px;text-align:right;border-right:1px solid #000;">${units.toFixed(2)} Units</td>
+                  <td style="border-right:1px solid #000;"></td>
+                  <td style="padding:4px;text-align:right;font-size:10pt;">₹ ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style="padding:4px 6px;font-size:8pt;border-top:1px solid #000;">
+              <div>Amount Chargeable (in words): <strong>Indian Rupees ${numWords(grandTotal)}</strong></div>
+            </div>
+
+            <div style="display:flex;border-top:1px solid #000;">
+              <div style="width:55%;padding:4px 6px;font-size:7.5pt;line-height:1.3;">
+                <strong>Declaration</strong><br>
+                <span>We declare that this invoice shows the actual price of the services described and that all particulars are true and correct.</span>
+              </div>
+              <div style="width:45%;padding:4px 6px;border-left:1px solid #000;text-align:right;">
+                <div style="font-weight:bold;font-size:8.5pt;">for ${cn}</div>
+                <div style="height:35px;"></div>
+                <div style="font-size:7.5pt;">Authorised Signatory</div>
+              </div>
+            </div>
+          </div>
+          <div style="text-align:right;font-size:7pt;font-weight:bold;margin-top:4px;">
+            This is a Computer Generated Invoice
+          </div>
+        </div>
+        </div>`;
+      }
+    }
+
+    // --- Preview Action ---
+    function doPreview() {
+      if (!validate()) { toast('Fill all required fields.', true); return; }
+      switchDocType('tax');
+      $('overlay').classList.add('on');
+    }
+
+    function closeOv() { $('overlay').classList.remove('on'); }
+
+    // --- Compress image to JPEG before embedding (reduces attachment size) ---
+    function compressImage(imgBase64, maxPx = 1800, quality = 0.78) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = function() {
+          let w = img.width, h = img.height;
+          if (w > maxPx || h > maxPx) {
+            const r = Math.min(maxPx / w, maxPx / h);
+            w = Math.round(w * r); h = Math.round(h * r);
+          }
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(c.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(imgBase64);
+        img.src = imgBase64;
+      });
+    }
+
+    // --- Add Attachment Image to PDF ---
+    async function addAttachmentToPDF(pdf, imgBase64) {
+      const compressed = await compressImage(imgBase64);
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = function() {
+          pdf.addPage();
+          const pW = pdf.internal.pageSize.getWidth();
+          const pH = pdf.internal.pageSize.getHeight();
+          const margin = 10;
+          const maxW = pW - (margin * 2);
+          const maxH = pH - (margin * 2);
+
+          let w = img.width;
+          let h = img.height;
+          const ratio = Math.min(maxW / w, maxH / h);
+          w *= ratio;
+          h *= ratio;
+
+          const x = (pW - w) / 2;
+          const y = (pH - h) / 2;
+
+          pdf.addImage(compressed, 'JPEG', x, y, w, h);
+          resolve();
+        };
+        img.onerror = resolve;
+        img.src = compressed;
+      });
+    }
+
+    // --- Tax Invoice PDF Generator ---
+    async function doGeneratePDF() {
+      if (!validate()) { toast('Fill all required fields.', true); return; }
+      closeOv();
+      const el = $('inv-render');
+      toast('Generating Tax Invoice PDF…');
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pW = pdf.internal.pageSize.getWidth();
+      const pH = pdf.internal.pageSize.getHeight();
+      const iW = pW - 14;
+
+      try {
+        // Page 1: Tax Invoice (GST e-Invoice)
+        el.innerHTML = buildInvoiceHTML('tax');
+        el.style.display = 'block';
+        const gstin = $('gstin').value.trim() || '29AAHFB1380P1Z0';
+        const invNo = $('invNo').value.trim() || '43/26-27';
+        const invDate = fmtDate($('invDate').value);
+        const units = parseFloat($('consumedUnits').value || 0) || 0;
+        const rate = parseFloat($('ratePerUnit').value || 0) || 4.50;
+        const addl = parseFloat($('addlAmt').value || 0) || 0;
+        renderQRCode(gstin, invNo, invDate, (units * rate) + addl);
+        await new Promise(r => setTimeout(r, 120));
+
+        const canvas = await html2canvas(el, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff', width: 794 });
+        const img = canvas.toDataURL('image/jpeg', 0.82);
+        const iH = iW * canvas.height / canvas.width;
+        pdf.addImage(img, 'JPEG', 7, 7, iW, Math.min(iH, pH - 14));
+
+        // Additional attachments if attached (e.g. Bill / Receipt)
+        if (billImageBase64) {
+          await addAttachmentToPDF(pdf, billImageBase64);
+        }
+
+        if (receiptImageBase64) {
+          await addAttachmentToPDF(pdf, receiptImageBase64);
+        }
+
+        const fname = 'EVCS_Tax_Invoice_' + ($('invNo').value || 'BPCL').replace(/[\/\\]/g, '_') + '.pdf';
+        pdf.save(fname);
+        toast('✔ Tax Invoice PDF downloaded successfully!');
+      } catch (err) {
+        console.error(err);
+        toast('PDF generation failed.', true);
+      } finally {
+        el.style.display = 'none';
+        el.innerHTML = '';
+      }
+    }
+
+    // --- Reset ---
+    function resetAll() {
+      if (!confirm('Reset all fields?')) return;
+      document.querySelectorAll('input').forEach(el => { if (!el.readOnly) el.value = ''; });
+      $('invNo').value = ''; $('addlAmt').value = ''; $('gstin').value = '';
+      document.querySelectorAll('.field').forEach(f => f.classList.remove('err'));
+      removeFile('bill');
+      removeFile('receipt');
+      recalc();
+    }
+
+    // --- Load Sample Data ---
+    function loadSampleData() {
+      selectSAP('156576');
+      $('billPeriod').value = 'April 2026';
+      $('invDate').value = new Date().toISOString().slice(0, 10);
+      $('billDate').value = new Date().toISOString().slice(0, 10);
+      toast('Sample April 2026 EVCS data loaded!');
+    }
+
+    // --- Toast ---
+    function toast(msg, bad = false) {
+      const el = $('toast');
+      el.textContent = msg;
+      el.className = 'toast show' + (bad ? ' bad' : '');
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    // --- Init ---
+    document.addEventListener('DOMContentLoaded', () => {
+      $('invDate').value = new Date().toISOString().slice(0, 10);
+      $('billDate').value = new Date().toISOString().slice(0, 10);
+
+      // Populate SAP and Outlet Name datalists with all 353 outlets
+      if (typeof VC_DATA !== 'undefined') {
+        const dlSap = $('sap-list');
+        if (dlSap) {
+          dlSap.innerHTML = VC_DATA.map(r => `<option value="${r.cc}">${r.cn} (VC: ${r.vc})</option>`).join('');
+        }
+        const dlName = $('outlet-list');
+        if (dlName) {
+          dlName.innerHTML = VC_DATA.map(r => `<option value="${r.cn}">SAP: ${r.cc} | VC: ${r.vc}</option>`).join('');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
